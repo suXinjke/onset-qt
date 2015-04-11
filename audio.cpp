@@ -28,69 +28,6 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     BASS_ChannelGetInfo( stream, &channelInfo );
     this->fillPCMData( audioFilePath );
 
-    audioType = AUDIO_FILE;
-    return true;
-}
-
-bool Audio::loadGeneratedAudio( double frequency, double samplingRate, double duration ) {
-    if ( channel ) {
-        this->stopAudio();
-        if ( !BASS_SampleFree( sample ) ) {
-            this->checkError();
-        }
-        channel = 0;
-    }
-
-    pcm.resize( ( int ) ( samplingRate * duration ) );
-
-    double increment = ( 2.0 * M_PI * frequency ) / samplingRate;
-    double angle = 0;
-
-    for ( int i = 0 ; i < pcm.length() ; i++ ) {
-        pcm[i] = qSin( angle );
-        angle += increment;
-    }
-
-    sample = BASS_SampleCreate( pcm.length() * 4, samplingRate, 1, 1, BASS_SAMPLE_FLOAT );
-    BASS_SampleSetData( sample, pcm.data() );
-
-    channel = BASS_SampleGetChannel( sample, false );
-
-    if ( !channel ) {
-        this->checkError();
-        return false;
-    }
-
-    BASS_ChannelGetInfo( channel, &channelInfo );
-
-    audioType = AUDIO_GENERATED;
-    return true;
-}
-
-bool Audio::loadRawAudio( const QVector<float> pcm , double samplingRate ) {
-    if ( channel ) {
-        this->stopAudio();
-        if ( !BASS_SampleFree( sample ) ) {
-            this->checkError();
-        }
-        channel = 0;
-    }
-
-    this->pcm = pcm;
-
-    sample = BASS_SampleCreate( pcm.length() * 4, samplingRate, 1, 1, BASS_SAMPLE_FLOAT );
-    BASS_SampleSetData( sample, pcm.data() );
-
-    channel = BASS_SampleGetChannel( sample, false );
-
-    if ( !channel ) {
-        this->checkError();
-        return false;
-    }
-
-    BASS_ChannelGetInfo( channel, &channelInfo );
-
-    audioType = AUDIO_GENERATED;
     return true;
 }
 
@@ -99,16 +36,9 @@ bool Audio::playAudio() {
         return false;
     }
 
-    if ( audioType == AUDIO_FILE ) {
-        if ( !BASS_ChannelPlay( stream, false ) ) {
-            this->checkError();
-            return false;
-        }
-    } else if ( audioType == AUDIO_GENERATED ) {
-        if ( !BASS_ChannelPlay( channel, false ) ) {
-            this->checkError();
-            return false;
-        }
+    if ( !BASS_ChannelPlay( stream, false ) ) {
+        this->checkError();
+        return false;
     }
 
     return true;
@@ -119,11 +49,7 @@ void Audio::stopAudio() {
         return;
     }
 
-    if ( audioType == AUDIO_FILE ) {
-        BASS_ChannelStop( stream );
-    } else if ( audioType == AUDIO_GENERATED ) {
-        BASS_ChannelPause( channel );
-    }
+    BASS_ChannelStop( stream );
 
     this->seekAudio( 0 );
 }
@@ -133,16 +59,9 @@ void Audio::pauseAudio() {
         return;
     }
 
-    if ( audioType == AUDIO_FILE ) {
-        if ( !BASS_ChannelPause( stream ) ) {
-            this->checkError();
-            return;
-        }
-    } else if ( audioType == AUDIO_GENERATED ) {
-        if ( !BASS_ChannelPause( channel ) ) {
-            this->checkError();
-            return;
-        }
+    if ( !BASS_ChannelPause( stream ) ) {
+        this->checkError();
+        return;
     }
 }
 
@@ -151,20 +70,13 @@ void Audio::seekAudio( double positionSeconds ) {
         return;
     }
 
-    if ( audioType == AUDIO_FILE ) {
-        QWORD audioPos = BASS_ChannelSeconds2Bytes( stream, positionSeconds );
-        if ( !BASS_ChannelSetPosition( stream, audioPos, BASS_POS_BYTE ) ) {
-            this->checkError();
-            return;
-        }
-    } else if ( audioType == AUDIO_GENERATED ) {
-        //QWORD audioPos = qMin( BASS_ChannelSeconds2Bytes( channel, positionSeconds ), BASS_ChannelGetLength( stream, BASS_POS_BYTE ) );
-        QWORD audioPos = BASS_ChannelSeconds2Bytes( channel, positionSeconds );
-        if ( !BASS_ChannelSetPosition( channel, audioPos, BASS_POS_BYTE ) ) {
-            this->checkError();
-            return;
-        }
+
+    QWORD audioPos = BASS_ChannelSeconds2Bytes( stream, positionSeconds );
+    if ( !BASS_ChannelSetPosition( stream, audioPos, BASS_POS_BYTE ) ) {
+        this->checkError();
+        return;
     }
+
 }
 
 double Audio::getAudioCurrentPositionSeconds() {
@@ -175,21 +87,15 @@ double Audio::getAudioCurrentPositionSeconds() {
     QWORD audioPos;
     double seconds;
 
-    if ( audioType == AUDIO_FILE ) {
-        audioPos = BASS_ChannelGetPosition( stream, BASS_POS_BYTE );
-    } else if ( audioType == AUDIO_GENERATED ) {
-        audioPos = BASS_ChannelGetPosition( channel, BASS_POS_BYTE );
-    }
+    audioPos = BASS_ChannelGetPosition( stream, BASS_POS_BYTE );
 
     if ( this->checkError() != 0 ) {
         return -1.0;
     }
 
-    if ( audioType == AUDIO_FILE ) {
-        seconds = BASS_ChannelBytes2Seconds( stream, audioPos );
-    } else if ( audioType == AUDIO_GENERATED ) {
-        seconds = BASS_ChannelBytes2Seconds( channel, audioPos );
-    }
+
+    seconds = BASS_ChannelBytes2Seconds( stream, audioPos );
+
 
     if ( seconds < 0.0 ) {
         this->checkError();
@@ -204,23 +110,14 @@ double Audio::getAudioDuration() {
     }
 
     QWORD audioLength;
-    if ( audioType == AUDIO_FILE ) {
-        audioLength = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
-    } else if ( audioType == AUDIO_GENERATED ) {
-        audioLength = BASS_ChannelGetLength( channel, BASS_POS_BYTE );
-    }
+    audioLength = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
 
     if ( this->checkError() != 0 ) {
         return -1.0;
     }
 
     double duration;
-
-    if ( audioType == AUDIO_FILE ) {
-        duration = BASS_ChannelBytes2Seconds( stream, audioLength );
-    } else if ( audioType == AUDIO_GENERATED ) {
-        duration = BASS_ChannelBytes2Seconds( channel, audioLength );
-    }
+    duration = BASS_ChannelBytes2Seconds( stream, audioLength );
 
     if ( duration < 0.0 ) {
         this->checkError();
@@ -243,19 +140,6 @@ int Audio::getAudioChannels() {
     }
 
     return channelInfo.chans;
-}
-
-QString Audio::getAudioTitle() {
-    if ( !stream ) {
-        return QString();
-    }
-
-    TAG_ID3 *tags = ( TAG_ID3 * ) BASS_ChannelGetTags( stream, BASS_TAG_ID3 );
-    if ( !tags ) {
-        return QString();
-    }
-
-    return QString( "%1 - %2" ).arg( tags->artist ).arg( tags->title );
 }
 
 int Audio::getSampleCount() {

@@ -20,8 +20,6 @@ public:
     explicit                            Audio( QObject *parent = 0 );
 
     bool                                loadAudio( const QString &audioFilePath );
-    bool                                loadGeneratedAudio( double frequency, double samplingRate, double duration );
-    bool                                loadRawAudio( const QVector<float> pcm, double samplingRate = 44100.0 );
     bool                                playAudio();
     void                                stopAudio();
     void                                pauseAudio();
@@ -31,18 +29,15 @@ public:
     double                              getAudioDuration();
     int                                 getAudioFrequency();
     int                                 getAudioChannels();
-    QString                             getAudioTitle();
 
     int                                 getSampleCount();
-    QVector<float>                      getPCMDataBlock( int index , int blockSize = 512 );
+    QVector<float>                      getPCMDataBlock( int index , int blockSize = 1024 );
 
     QVector<float>                      getPCMData() const;
     QVector<float>                      getSpectralFlux();
 
 
 private:
-    AUDIO_TYPE                          audioType;
-
     HSTREAM                             stream;
     HCHANNEL                            channel;
     BASS_CHANNELINFO                    channelInfo;

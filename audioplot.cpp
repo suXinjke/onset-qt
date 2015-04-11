@@ -2,11 +2,7 @@
 
 AudioPlot::AudioPlot( QWidget *parent ) :
     QCustomPlot( parent ),
-    xAxisInformation( X_AXIS_INFORMATION_SECONDS ),
-    sampleAccuracy( 1 ),
-    sampleCount( 0 ),
-    sampleFrequency( 1 ),
-    sampleChannels( 1 ) {
+    audio( 0 ) {
 
     pcmGraph = this->addGraph();
     this->xAxis->setRange( 0, 1 );
@@ -14,7 +10,7 @@ AudioPlot::AudioPlot( QWidget *parent ) :
 //    this->xAxis->setAutoTickLabels( false );
     this->xAxis->setSubTickCount( 0 );
 //    connect( this->xAxis, SIGNAL( ticksRequest() ), this, SLOT( calculateTicks() ) );
-//    this->yAxis->setRange( -2, 2 );
+    this->yAxis->setRange( -2, 2 );
 //    this->yAxis->setAutoTickStep( false );
 //    this->yAxis->setTickStep( 0.5 );
 //    this->yAxis->setSubTickCount( 0 );
@@ -32,27 +28,23 @@ AudioPlot::AudioPlot( QWidget *parent ) :
     connect( this, SIGNAL( mousePress( QMouseEvent * ) ), this, SLOT( onRightClick( QMouseEvent * ) ) );
 }
 
-void AudioPlot::loadPCMData( const QVector<float> pcm ) {
-//    sampleCount = pcm.length() * 1024;
-//    int plotPointCount = qCeil( sampleCount / ( double ) sampleAccuracy );
+void AudioPlot::setAudio( Audio *audio ) {
+    this->audio = audio;
+}
 
-//    x.resize( plotPointCount );
-//    y.resize( plotPointCount );
-//    for ( int i = 0, p = 0; i < sampleCount ; i += sampleAccuracy ) {
-//        x[p] = i * 2;
-//        y[p] = pcm.at( i / 1024 );
-//        p++;
-//    }
+void AudioPlot::loadPCMData( int step ) {
+    QVector<float> pcm = audio->getPCMData();
+    double frequency = audio->getAudioFrequency();
+    int channels = audio->getAudioChannels();
 
-//    pcmGraph->setData( x, y );
+    int N = pcm.size();
 
-    qDebug() << sampleFrequency;
-
-    x.resize( pcm.size() );
-    y.resize( pcm.size() );
-    for ( int i = 0 ; i < pcm.size() ; i++ ) {
-        x[i] = i * 1024 / sampleFrequency;
-        y[i] = pcm.at( i );
+    x.resize( qCeil( N / ( double ) step ) );
+    y.resize( qCeil( N / ( double ) step ) );
+    for ( int i = 0, p = 0 ; i < N ; i += step ) {
+        x[p] = i / frequency / channels;
+        y[p] = pcm.at( i );
+        p++;
     }
 
     pcmGraph->setData( x, y );
@@ -60,22 +52,24 @@ void AudioPlot::loadPCMData( const QVector<float> pcm ) {
     this->replot();
 }
 
-void AudioPlot::setSampleFrequency( int sampleFrequency ) {
-    if ( sampleFrequency < 1 ) {
-        qDebug() << "Sample frequency is less than 1";
-        return;
+void AudioPlot::loadPCMBlock( int index, int step, int blockSize ) {
+    QVector<float> pcm = audio->getPCMDataBlock( index, blockSize );
+    double frequency = audio->getAudioFrequency();
+    int channels = audio->getAudioChannels();
+
+    int N = pcm.size();
+
+    x.resize( qCeil( N / ( double ) step ) );
+    y.resize( qCeil( N / ( double ) step ) );
+    for ( int i = 0, p = 0 ; i < N ; i += step ) {
+        x[p] = i / frequency / channels;
+        y[p] = pcm.at( i );
+        p++;
     }
 
-    this->sampleFrequency = sampleFrequency;
-}
+    pcmGraph->setData( x, y );
 
-void AudioPlot::setSampleChannels( int sampleChannels ) {
-    if ( sampleChannels < 1 ) {
-        qDebug() << "Sample channels are less than 1";
-        return;
-    }
-
-    this->sampleChannels = sampleChannels;
+    this->replot();
 }
 
 void AudioPlot::setPositionInSeconds( double seconds ) {
@@ -109,47 +103,47 @@ void AudioPlot::resetRange() {
     this->replot();
 }
 
-void AudioPlot::calculateTicks() {
-//    double upper = this->xAxis->range().upper;
-//    double lower = this->xAxis->range().lower;
-//    double range = upper - lower;
-    double increment = 0.0;
-    if ( x.size() > 0 ) {
-//        increment = qMin( x.last(), range )  * 0.2;
-        increment = x.last() * 0.1;
-    } else {
-        return;
-    }
+//void AudioPlot::calculateTicks() {
+////    double upper = this->xAxis->range().upper;
+////    double lower = this->xAxis->range().lower;
+////    double range = upper - lower;
+//    double increment = 0.0;
+//    if ( x.size() > 0 ) {
+////        increment = qMin( x.last(), range )  * 0.2;
+//        increment = x.last() * 0.1;
+//    } else {
+//        return;
+//    }
 
-    QVector<double> ticks;
-    QVector<QString> tickLabels;
-//    for ( double i = 0.0 ; i < qMin( x.last(), range ) ; i += increment ) {
-    for ( double i = 0.0 ; i < x.last() ; i += increment ) {
-        ticks << i;
+//    QVector<double> ticks;
+//    QVector<QString> tickLabels;
+////    for ( double i = 0.0 ; i < qMin( x.last(), range ) ; i += increment ) {
+//    for ( double i = 0.0 ; i < x.last() ; i += increment ) {
+//        ticks << i;
 
-        QString tickLabel;
-        switch ( xAxisInformation ) {
-            case X_AXIS_INFORMATION_SAMPLE_INDEX:
-                tickLabel = QString::number( ( int ) i );
-                break;
+//        QString tickLabel;
+//        switch ( xAxisInformation ) {
+//            case X_AXIS_INFORMATION_SAMPLE_INDEX:
+//                tickLabel = QString::number( ( int ) i );
+//                break;
 
-            case X_AXIS_INFORMATION_SECONDS:
-                tickLabel = QString::number( i / sampleFrequency / sampleChannels );
-                break;
+//            case X_AXIS_INFORMATION_SECONDS:
+//                tickLabel = QString::number( i / sampleFrequency / sampleChannels );
+//                break;
 
-            case X_AXIS_INFORMATION_MINUTES_SECONDS:
-                //IMPLEMENT THIS!
-                tickLabel = QString::number( i / sampleFrequency / sampleChannels );
-                break;
-        }
+//            case X_AXIS_INFORMATION_MINUTES_SECONDS:
+//                //IMPLEMENT THIS!
+//                tickLabel = QString::number( i / sampleFrequency / sampleChannels );
+//                break;
+//        }
 
-        tickLabels << tickLabel;
-    }
+//        tickLabels << tickLabel;
+//    }
 
-    this->xAxis->setTickVector( ticks );
-    this->xAxis->setTickVectorLabels( tickLabels );
-    this->replot();
-}
+//    this->xAxis->setTickVector( ticks );
+//    this->xAxis->setTickVectorLabels( tickLabels );
+//    this->replot();
+//}
 
 void AudioPlot::onRightClick( QMouseEvent *mouseEvent ) {
     if ( mouseEvent->button() != Qt::RightButton ) {
@@ -158,13 +152,4 @@ void AudioPlot::onRightClick( QMouseEvent *mouseEvent ) {
 
     double positionSeconds = this->xAxis->pixelToCoord( mouseEvent->x() );
     emit positionChanged( positionSeconds );
-}
-
-void AudioPlot::setSampleAccuracy( int sampleAccuracy ) {
-    if ( sampleAccuracy < 1 ) {
-        qDebug() << "Sample accuracy is less than 1";
-        return;
-    }
-
-    this->sampleAccuracy = sampleAccuracy;
 }

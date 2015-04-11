@@ -7,7 +7,6 @@
 #include <QDebug>
 #include "audio.h"
 #include "audioplot.h"
-#include "sampleblockwindow.h"
 
 namespace Ui {
     class Onset;
@@ -22,7 +21,6 @@ public:
 
 private:
     Ui::Onset                           *ui;
-    SampleBlockWindow                   *sampleBlockWindow;
 
     Audio                               *audio;
     QTimer                              *seekTimer;
@@ -35,19 +33,13 @@ private:
     void                                loadAudioFile( const QString &audioFilePath );
 
 private slots:
-    void                                bringSampleBlockWidget();
     void                                loadAudioFile();
-    void                                generateAudio();
-    void                                regenerateAudio();
     void                                play();
     void                                pause();
     void                                stop();
     void                                seek( int seconds );
     void                                seek( double seconds );
     void                                updateSeekInfo();
-    void                                reloadAudioPlot();
-    void                                updateAudioPlotSampleAccuracy( int accuracyIndex );
-    void                                updateAudioPlotSampleAccuracy( bool autoChecked );
 
 
 

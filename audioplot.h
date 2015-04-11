@@ -2,6 +2,7 @@
 #define AUDIOPLOT_H
 
 #include "qcustomplot.h"
+#include "audio.h"
 
 class AudioPlot : public QCustomPlot {
     Q_OBJECT
@@ -14,30 +15,23 @@ public:
 
     explicit                            AudioPlot( QWidget *parent = 0 );
 
-    void                                loadPCMData( const QVector<float> pcm );
-    void                                setSampleFrequency( int sampleFrequency );
-    void                                setSampleChannels( int sampleChannels );
+    void                                setAudio( Audio *audio );
+    void                                loadPCMData( int step = 1 );
+    void                                loadPCMBlock( int index, int step = 1, int blockSize = 1024 );
     void                                setPositionInSeconds( double seconds );
 
 public slots:
-    void                                setSampleAccuracy( int sampleAccuracy );
     void                                resetRange();
 
 private:
+    Audio                               *audio;
     QCPGraph                            *pcmGraph;
     QCPItemStraightLine                 *position;
-    X_AXIS_INFORMATION                  xAxisInformation;
-
-    int                                 sampleAccuracy;
-    int                                 sampleCount;
-    int                                 sampleFrequency;
-    int                                 sampleChannels;
 
     QVector<double>                     x;
     QVector<double>                     y;
 
 private slots:
-    void                                calculateTicks();
     void                                onRightClick( QMouseEvent *mouseEvent );
 
 signals:
