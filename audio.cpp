@@ -194,16 +194,6 @@ QVector<float> Audio::getSpectralFlux() {
     }
     int THRESHOLD_WINDOW_SIZE = 20;
     float MULTIPLIER = 1.5f;
-//    for( int i = 0; i < spectralFlux.size(); i++ )
-//    {
-//       int start = Math.max( 0, i - THRESHOLD_WINDOW_SIZE );
-//       int end = Math.min( spectralFlux.size() - 1, i + THRESHOLD_WINDOW_SIZE );
-//       float mean = 0;
-//       for( int j = start; j <= end; j++ )
-//          mean += spectralFlux.get(j);
-//       mean /= (end - start);
-//       threshold.add( mean * MULTIPLIER );
-//    }
 
     for ( int i = 0; i < spectralFlux.length() ; i++ ) {
         int start = qMax( 0, i - THRESHOLD_WINDOW_SIZE );

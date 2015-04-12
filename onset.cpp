@@ -24,10 +24,10 @@ Onset::Onset( QWidget *parent ) :
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
 
-    QVector<float> pcm;
-    pcm << 1.0 << 1.0 << 1.0 << 1.0 << 0.0 << 0.0 << 0.0 << 0.0;
+//    QVector<float> pcm;
+//    pcm << 1.0 << 1.0 << 1.0 << 1.0 << 0.0 << 0.0 << 0.0 << 0.0;
 
-    ui->audioPlot->loadPCMData( Transform::FFT( pcm ) );
+//    ui->audioPlot->loadPCMData( Transform::FFT( pcm ) );
 }
 
 Onset::~Onset() {

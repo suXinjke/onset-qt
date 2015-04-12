@@ -6,6 +6,7 @@
 #include <QDebug>
 #include "qmath.h"
 #include <complex>
+#include <valarray>
 #include <QElapsedTimer>
 
 class Transform : public QObject {
@@ -15,7 +16,7 @@ public:
 
     static QVector<float>               correlateDFT( const QVector<float> &pcmBlock );
     static QVector<float>               FFT( const QVector<float> &pcmBlock );
-    static void                         FFT( QVector<std::complex< float > > &x );
+    static void                         FFT(std::valarray<std::complex<float> > &x );
     static float                        getSpectrumFlux( QVector<float> &pcmBlock , QVector<float> &nextPcmBlock );
     static void                         hamming( QVector<float> &pcmBlock );
 
