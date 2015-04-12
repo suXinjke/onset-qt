@@ -44,9 +44,11 @@ private:
     BASS_CHANNELINFO                    channelInfo;
     HSAMPLE                             sample;
     QVector<float>                      pcm;
+    QVector<float>                      onset;
 
 
     void                                fillPCMData( const QString &audioFilePath );
+    void                                fillOnset();
     int                                 checkError();
 };
 

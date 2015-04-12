@@ -18,6 +18,7 @@ public:
     static QVector<float>               FFT( const QVector<float> &pcmBlock );
     static void                         FFT(std::valarray<std::complex<float> > &x );
     static float                        getSpectrumFlux( QVector<float> &pcmBlock , QVector<float> &nextPcmBlock );
+    static float                        getSpectrumFlux( float *block , float *nextBlock );
     static void                         hamming( QVector<float> &pcmBlock );
 
 };

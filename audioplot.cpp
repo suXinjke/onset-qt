@@ -96,6 +96,7 @@ void AudioPlot::loadPCMBlock( int index, int step, int blockSize ) {
 void AudioPlot::loadOnset( int step ) {
     QVector<float> pcm = audio->getSpectralFlux();
     double frequency = audio->getAudioFrequency();
+    int channels = audio->getAudioChannels();
 
     int N = pcm.size();
 

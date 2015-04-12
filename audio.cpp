@@ -19,6 +19,7 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     }
 
     stream = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT );
+    channel = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE );
 
     if ( !stream ) {
         this->checkError();
@@ -27,6 +28,8 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
 
     BASS_ChannelGetInfo( stream, &channelInfo );
     this->fillPCMData( audioFilePath );
+
+//    this->fillOnset();
 
     return true;
 }
@@ -184,14 +187,30 @@ QVector<float> Audio::getSpectralFlux() {
     QVector<float> threshold;
     QVector<float> prunnedSpectralFlux;
     QVector<float> peaks;
-    int blockCount = qCeil( this->getSampleCount() / 1024.0 );
-    for ( int i = 1 ; i < blockCount ; i++ ) {
-        QVector<float> pcmBlock = this->getPCMDataBlock( i - 1, 1024 );
-        QVector<float> nextPcmBlock = this->getPCMDataBlock( i, 1024 );
-        spectralFlux.append( Transform::getSpectrumFlux( pcmBlock, nextPcmBlock ) );
 
+//    int blockCount = qCeil( this->getSampleCount() / 1024.0 );
+//    for ( int i = 1 ; i < blockCount ; i++ ) {
+//        QVector<float> pcmBlock = this->getPCMDataBlock( i - 1, 1024 );
+//        QVector<float> nextPcmBlock = this->getPCMDataBlock( i, 1024 );
+//        spectralFlux.append( Transform::getSpectrumFlux( pcmBlock, nextPcmBlock ) );
+//    }
 
+    qDebug() << BASS_ChannelSeconds2Bytes( channel, 1.0 );
+
+    long length = BASS_ChannelGetLength( channel, BASS_POS_BYTE );
+    long step = 1024 * 4 * 2;
+    for ( long i = step ; i < length; i += step ) {
+        float fft[256];
+        float nextFft[256];
+        BASS_ChannelSetPosition( channel, i - step, BASS_POS_BYTE | BASS_POS_DECODETO );
+        BASS_ChannelGetData( channel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+
+        BASS_ChannelSetPosition( channel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
+        BASS_ChannelGetData( channel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+        spectralFlux.append( Transform::getSpectrumFlux( fft, nextFft ) );
     }
+
+    qDebug() << "Spec flux length: " << spectralFlux.length();
     int THRESHOLD_WINDOW_SIZE = 20;
     float MULTIPLIER = 1.5f;
 
@@ -222,6 +241,7 @@ QVector<float> Audio::getSpectralFlux() {
         }
     }
 
+
     return peaks;
 }
 
@@ -247,6 +267,50 @@ void Audio::fillPCMData( const QString &audioFilePath ) {
     if ( !BASS_SampleFree( sample ) ) {
         this->checkError();
     }
+}
+
+void Audio::fillOnset( ) {
+    if ( stream ) {
+        this->stopAudio();
+    } else {
+        return;
+    }
+
+    long pos = 0;
+    long length = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
+
+//    while ( pos < length ) {
+//        BASS_ChannelSetPosition( stream, pos, BASS_POS_BYTE );
+//        float fft[512];
+
+//        BASS_ChannelGetData( stream, fft, BASS_DATA_FFT1024 );
+
+//        for ( int i = 0 ; i < 512 ; i++ ) {
+//            onset.append( fft[i] );
+//        }
+
+//        pos += 1024;
+//    }
+    qDebug() << BASS_ChannelSeconds2Bytes( channel, 1.0 );
+
+    BASS_ChannelSetPosition( channel, 1024 * 300 * 4, BASS_POS_BYTE );
+    float fft[1024];
+    qDebug() << BASS_ChannelGetData( channel, fft, BASS_DATA_FLOAT );
+    checkError();
+
+
+    for ( int i = 0 ; i < 512 ; i++ ) {
+        onset.append( fft[i] );
+    }
+
+//    QVector<float> fft2 = Transform::FFT( this->getPCMDataBlock( 300 ) );
+
+    qDebug() << onset;
+
+    qDebug() << this->getPCMDataBlock( 300 );
+//    qDebug() << fft2;
+
+
 }
 
 int Audio::checkError() {

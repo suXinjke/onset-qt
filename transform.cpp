@@ -90,6 +90,16 @@ float Transform::getSpectrumFlux( QVector<float> &pcmBlock, QVector<float> &next
     return flux;
 }
 
+float Transform::getSpectrumFlux( float *block, float *nextBlock ) {
+    float flux = 0.0;
+    for ( int i = 0 ; i < 256 ; i++ ) {
+        float value = nextBlock[i] - block[i];
+        flux += value < 0 ? 0 : value;
+    }
+
+    return flux;
+}
+
 void Transform::hamming( QVector<float> &pcmBlock ) {
     for ( int i = 0 ; i < pcmBlock.length() ; i++ ) {
         pcmBlock[i] *= ( 0.54f - 0.46f * qCos( 2 * M_PI * i / ( pcmBlock.length() - 1 ) ) );
