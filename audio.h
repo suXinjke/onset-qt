@@ -7,6 +7,7 @@
 #include "bass.h"
 #include "qmath.h"
 #include "transform.h"
+#include <QElapsedTimer>
 
 class Audio : public QObject {
     Q_OBJECT

@@ -189,6 +189,8 @@ QVector<float> Audio::getSpectralFlux() {
         QVector<float> pcmBlock = this->getPCMDataBlock( i - 1, 1024 );
         QVector<float> nextPcmBlock = this->getPCMDataBlock( i, 1024 );
         spectralFlux.append( Transform::getSpectrumFlux( pcmBlock, nextPcmBlock ) );
+
+
     }
     int THRESHOLD_WINDOW_SIZE = 20;
     float MULTIPLIER = 1.5f;

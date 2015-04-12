@@ -23,6 +23,11 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->loadAudioFileAction, SIGNAL( triggered() ), this, SLOT( loadAudioFile() ) );
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
+
+    QVector<float> pcm;
+    pcm << 1.0 << 1.0 << 1.0 << 1.0 << 0.0 << 0.0 << 0.0 << 0.0;
+
+    ui->audioPlot->loadPCMData( Transform::FFT( pcm ) );
 }
 
 Onset::~Onset() {
@@ -52,7 +57,7 @@ void Onset::loadAudioFile( const QString &audioFilePath ) {
     ui->audioSeekSlider->setMaximum( audioDuration );
     this->updateSeekInfo();
 
-    ui->audioPlot->loadPCMBlock( 5000 );
+    ui->audioPlot->loadOnset();
     this->play();
 }
 

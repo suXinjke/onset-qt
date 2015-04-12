@@ -7,6 +7,7 @@
 #include <QDebug>
 #include "audio.h"
 #include "audioplot.h"
+#include "transform.h"
 
 namespace Ui {
     class Onset;

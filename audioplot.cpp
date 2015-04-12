@@ -23,9 +23,13 @@ AudioPlot::AudioPlot( QWidget *parent ) :
     position = new QCPItemStraightLine( this );
     position->setPen( QPen( Qt::red ) );
     this->addItem( position );
-    this->setPositionInSeconds( 5.0 );
+    this->setPositionInSeconds( 0.0 );
+
+    pcmGraph->setScatterStyle( QCPScatterStyle::ssDisc );
+    pcmGraph->setLineStyle( QCPGraph::lsImpulse );
 
     connect( this, SIGNAL( mousePress( QMouseEvent * ) ), this, SLOT( onRightClick( QMouseEvent * ) ) );
+    connect( this, SIGNAL( mouseMove( QMouseEvent * ) ), this, SLOT( getCursorCoordinates( QMouseEvent * ) ) );
 }
 
 void AudioPlot::setAudio( Audio *audio ) {
@@ -50,6 +54,23 @@ void AudioPlot::loadPCMData( int step ) {
     pcmGraph->setData( x, y );
 
     this->replot();
+    this->resetRange();
+}
+
+void AudioPlot::loadPCMData( const QVector<float> &pcm ) {
+    int N = pcm.size();
+
+    x.resize( N );
+    y.resize( N );
+    for ( int i = 0; i < N ; i ++ ) {
+        x[i] = i;
+        y[i] = pcm.at( i );
+    }
+
+    pcmGraph->setData( x, y );
+
+    this->replot();
+    this->resetRange();
 }
 
 void AudioPlot::loadPCMBlock( int index, int step, int blockSize ) {
@@ -70,6 +91,26 @@ void AudioPlot::loadPCMBlock( int index, int step, int blockSize ) {
     pcmGraph->setData( x, y );
 
     this->replot();
+}
+
+void AudioPlot::loadOnset( int step ) {
+    QVector<float> pcm = audio->getSpectralFlux();
+    double frequency = audio->getAudioFrequency();
+
+    int N = pcm.size();
+
+    x.resize( qCeil( N / ( double ) step ) );
+    y.resize( qCeil( N / ( double ) step ) );
+    for ( int i = 0, p = 0 ; i < N ; i += step ) {
+        x[p] = i * ( 1024.0 / frequency );
+        y[p] = pcm.at( i );
+        p++;
+    }
+
+    pcmGraph->setData( x, y );
+
+    this->replot();
+    this->resetRange();
 }
 
 void AudioPlot::setPositionInSeconds( double seconds ) {
@@ -101,6 +142,14 @@ void AudioPlot::resetRange() {
     this->yAxis->setRange( min - 1, max + 1 );
 
     this->replot();
+}
+
+void AudioPlot::paintEvent( QPaintEvent *event ) {
+    QCustomPlot::paintEvent( event );
+
+    QPainter painter( this );
+    QRectF rect( this->width() - 70, 0, 70, 20 );
+    painter.drawText( rect, Qt::AlignRight, cursorCoordinates );
 }
 
 //void AudioPlot::calculateTicks() {
@@ -152,4 +201,15 @@ void AudioPlot::onRightClick( QMouseEvent *mouseEvent ) {
 
     double positionSeconds = this->xAxis->pixelToCoord( mouseEvent->x() );
     emit positionChanged( positionSeconds );
+}
+
+void AudioPlot::getCursorCoordinates( QMouseEvent *mouseEvent ) {
+    if ( mouseEvent ) {
+        QString x = QString::number( this->xAxis->pixelToCoord( mouseEvent->x() ), 'f', 2 );
+        QString y = QString::number( this->yAxis->pixelToCoord( mouseEvent->y() ), 'f', 2 );
+        cursorCoordinates = QString( "%1, %2" ).arg( x ).arg( y );
+
+        this->repaint();
+    }
+
 }

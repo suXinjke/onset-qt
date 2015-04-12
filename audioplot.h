@@ -17,7 +17,9 @@ public:
 
     void                                setAudio( Audio *audio );
     void                                loadPCMData( int step = 1 );
+    void                                loadPCMData( const QVector<float> &pcm );
     void                                loadPCMBlock( int index, int step = 1, int blockSize = 1024 );
+    void                                loadOnset( int step = 1 );
     void                                setPositionInSeconds( double seconds );
 
 public slots:
@@ -30,12 +32,17 @@ private:
 
     QVector<double>                     x;
     QVector<double>                     y;
+    QString                             cursorCoordinates;
+
+    void                                paintEvent( QPaintEvent *event );
 
 private slots:
     void                                onRightClick( QMouseEvent *mouseEvent );
+    void                                getCursorCoordinates( QMouseEvent *mouseEvent );
 
 signals:
     void                                positionChanged( double positionSeconds );
+    void                                cursorCoordinatesChanged( const QString &coordinates );
 
 };
 
