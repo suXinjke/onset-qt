@@ -30,25 +30,23 @@ public:
     double                              getAudioDuration();
     int                                 getAudioFrequency();
     int                                 getAudioChannels();
-
     int                                 getSampleCount();
-    QVector<float>                      getPCMDataBlock( int index , int blockSize = 1024 );
+    int                                 getSampleBlockCount( int sampleBlockSize = 1024 );
 
-    QVector<float>                      getPCMData() const;
-    QVector<float>                      getSpectralFlux();
+    QVector<float>                      getSampleBlock( int index, int blockSize = 1024 );
+    QVector<float>                      getOnset() const;
 
 
 private:
     HSTREAM                             stream;
-    HCHANNEL                            channel;
     BASS_CHANNELINFO                    channelInfo;
-    HSAMPLE                             sample;
-    QVector<float>                      pcm;
+
     QVector<float>                      onset;
+    QVector<float>                      pcm;
+    QString                             audioFilePath;
 
-
-    void                                fillPCMData( const QString &audioFilePath );
     void                                fillOnset();
+    void                                fillPCM();
     int                                 checkError();
 };
 

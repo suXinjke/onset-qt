@@ -1,7 +1,7 @@
 #include "audio.h"
 
 Audio::Audio( QObject *parent ) :
-    QObject( parent ), stream( 0 ), channel( 0 ) {
+    QObject( parent ), stream( 0 ) {
 
     if ( !BASS_Init( -1, 44100, 0, NULL, NULL ) ) {
         this->checkError();
@@ -19,7 +19,6 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     }
 
     stream = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT );
-    channel = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE );
 
     if ( !stream ) {
         this->checkError();
@@ -27,15 +26,15 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     }
 
     BASS_ChannelGetInfo( stream, &channelInfo );
-    this->fillPCMData( audioFilePath );
+    this->audioFilePath = audioFilePath;
 
-//    this->fillOnset();
-
+    this->fillOnset();
+    this->fillPCM( );
     return true;
 }
 
 bool Audio::playAudio() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return false;
     }
 
@@ -48,7 +47,7 @@ bool Audio::playAudio() {
 }
 
 void Audio::stopAudio() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return;
     }
 
@@ -58,7 +57,7 @@ void Audio::stopAudio() {
 }
 
 void Audio::pauseAudio() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return;
     }
 
@@ -69,7 +68,7 @@ void Audio::pauseAudio() {
 }
 
 void Audio::seekAudio( double positionSeconds ) {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return;
     }
 
@@ -83,7 +82,7 @@ void Audio::seekAudio( double positionSeconds ) {
 }
 
 double Audio::getAudioCurrentPositionSeconds() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return -1.0;
     }
 
@@ -108,19 +107,17 @@ double Audio::getAudioCurrentPositionSeconds() {
 }
 
 double Audio::getAudioDuration() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return -1.0;
     }
 
-    QWORD audioLength;
-    audioLength = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
+    QWORD audioLength = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
 
     if ( this->checkError() != 0 ) {
         return -1.0;
     }
 
-    double duration;
-    duration = BASS_ChannelBytes2Seconds( stream, audioLength );
+    double duration = BASS_ChannelBytes2Seconds( stream, audioLength );
 
     if ( duration < 0.0 ) {
         this->checkError();
@@ -130,7 +127,7 @@ double Audio::getAudioDuration() {
 }
 
 int Audio::getAudioFrequency() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return -1;
     }
 
@@ -138,7 +135,7 @@ int Audio::getAudioFrequency() {
 }
 
 int Audio::getAudioChannels() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return -1;
     }
 
@@ -146,71 +143,113 @@ int Audio::getAudioChannels() {
 }
 
 int Audio::getSampleCount() {
-    if ( !stream && !channel ) {
+    if ( !stream ) {
         return -1;
     }
 
     int frequency = this->getAudioFrequency();
+    int channels = this->getAudioChannels();
     double duration = this->getAudioDuration();
 
-    return qCeil( frequency * duration );
+    double samples = frequency * duration;
+    if ( channels == 1 ) {
+        samples /= 2.0;
+    }
+
+    return qCeil( samples );
 }
 
-QVector<float> Audio::getPCMDataBlock( int index, int blockSize ) {
-    if ( !stream && !channel ) {
+int Audio::getSampleBlockCount( int sampleBlockSize ) {
+    double sampleCount = this->getSampleCount();
+
+    return qCeil( sampleCount / sampleBlockSize );
+}
+
+QVector<float> Audio::getSampleBlock( int index, int blockSize ) {
+    if ( index < 0 || index >= this->getSampleBlockCount( blockSize ) ) {
         return QVector<float>();
     }
 
-    if ( index >= this->getSampleCount() ) {
-        return QVector<float>();
+    int actualBlockSize = blockSize * 2; //2 because float doubles memory usage
+
+    QVector<float> sampleBlock( actualBlockSize );
+    sampleBlock.fill( 0 );
+
+    int beginPos = index * actualBlockSize;
+    int endPos = qMin( ( index + 1 ) * actualBlockSize, pcm.length() );
+
+    for ( int i = beginPos, p = 0 ; i < endPos ; i++ ) {
+        sampleBlock[p] = pcm.at( i );
+        p++;
     }
 
-    QVector<float> pcmPart( blockSize );
-    for ( int i = 0 ; i < blockSize ; i++ ) {
-        double data;
-        if ( index * blockSize + i >= pcm.length() ) {
-            data = 0.0;
-        } else {
-            data = pcm.at( index * blockSize + i );
-        }
-        pcmPart[i] = data;
+    return sampleBlock;
+}
+
+QVector<float> Audio::getOnset() const {
+    return onset;
+}
+
+void Audio::fillPCM() {
+    if ( !stream ) {
+        return;
     }
-    return pcmPart;
+
+    HSAMPLE sample = BASS_SampleLoad( false, audioFilePath.toStdString().c_str(), 0, 0, 1, BASS_SAMPLE_FLOAT );
+    BASS_SAMPLE sampleInfo;
+    if ( !BASS_SampleGetInfo( sample, &sampleInfo ) ) {
+        this->checkError();
+        return;
+    }
+
+    //freq * seconds * sampleSize * chans = length (bytes)
+
+    pcm.resize( sampleInfo.length / sizeof( float ) );
+    if ( !BASS_SampleGetData( sample, pcm.data() ) ) {
+        this->checkError();
+    }
+
+    if ( !BASS_SampleFree( sample ) ) {
+        this->checkError();
+    }
 }
 
-QVector<float> Audio::getPCMData() const {
-    return pcm;
-}
+void Audio::fillOnset() {
+    HSTREAM decodeChannel = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE );
 
-QVector<float> Audio::getSpectralFlux() {
+    if ( !decodeChannel ) {
+        this->checkError();
+        return;
+    }
+
     QVector<float> spectralFlux;
     QVector<float> threshold;
     QVector<float> prunnedSpectralFlux;
     QVector<float> peaks;
 
-//    int blockCount = qCeil( this->getSampleCount() / 1024.0 );
-//    for ( int i = 1 ; i < blockCount ; i++ ) {
-//        QVector<float> pcmBlock = this->getPCMDataBlock( i - 1, 1024 );
-//        QVector<float> nextPcmBlock = this->getPCMDataBlock( i, 1024 );
-//        spectralFlux.append( Transform::getSpectrumFlux( pcmBlock, nextPcmBlock ) );
-//    }
-
-    qDebug() << BASS_ChannelSeconds2Bytes( channel, 1.0 );
-
-    long length = BASS_ChannelGetLength( channel, BASS_POS_BYTE );
-    long step = 1024 * 4 * 2;
+    long length = BASS_ChannelGetLength( decodeChannel, BASS_POS_BYTE );
+    int channels = this->getAudioChannels();
+    long step = 1024 * sizeof( float ) * channels;
     for ( long i = step ; i < length; i += step ) {
         float fft[256];
         float nextFft[256];
-        BASS_ChannelSetPosition( channel, i - step, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( channel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+        BASS_ChannelSetPosition( decodeChannel, i - step, BASS_POS_BYTE | BASS_POS_DECODETO );
+        BASS_ChannelGetData( decodeChannel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
 
-        BASS_ChannelSetPosition( channel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( channel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
-        spectralFlux.append( Transform::getSpectrumFlux( fft, nextFft ) );
+        BASS_ChannelSetPosition( decodeChannel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
+        BASS_ChannelGetData( decodeChannel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+
+        float flux = 0.0;
+        for ( int i = 0 ; i < 256 ; i++ ) {
+            float value = nextFft[i] - fft[i];
+            flux += value < 0 ? 0 : value;
+        }
+
+        spectralFlux.append( flux );
     }
 
-    qDebug() << "Spec flux length: " << spectralFlux.length();
+    BASS_StreamFree( decodeChannel );
+
     int THRESHOLD_WINDOW_SIZE = 20;
     float MULTIPLIER = 1.5f;
 
@@ -241,76 +280,7 @@ QVector<float> Audio::getSpectralFlux() {
         }
     }
 
-
-    return peaks;
-}
-
-void Audio::fillPCMData( const QString &audioFilePath ) {
-    if ( !stream ) {
-        return;
-    }
-
-    sample = BASS_SampleLoad( false, audioFilePath.toStdString().c_str(), 0, 0, 1, BASS_SAMPLE_FLOAT );
-    BASS_SAMPLE sampleInfo;
-    if ( !BASS_SampleGetInfo( sample, &sampleInfo ) ) {
-        this->checkError();
-        return;
-    }
-
-    //freq * seconds * sampleSize * chans = length (bytes)
-
-    pcm.resize( sampleInfo.length / sizeof( float ) );
-    if ( !BASS_SampleGetData( sample, pcm.data() ) ) {
-        this->checkError();
-    }
-
-    if ( !BASS_SampleFree( sample ) ) {
-        this->checkError();
-    }
-}
-
-void Audio::fillOnset( ) {
-    if ( stream ) {
-        this->stopAudio();
-    } else {
-        return;
-    }
-
-    long pos = 0;
-    long length = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
-
-//    while ( pos < length ) {
-//        BASS_ChannelSetPosition( stream, pos, BASS_POS_BYTE );
-//        float fft[512];
-
-//        BASS_ChannelGetData( stream, fft, BASS_DATA_FFT1024 );
-
-//        for ( int i = 0 ; i < 512 ; i++ ) {
-//            onset.append( fft[i] );
-//        }
-
-//        pos += 1024;
-//    }
-    qDebug() << BASS_ChannelSeconds2Bytes( channel, 1.0 );
-
-    BASS_ChannelSetPosition( channel, 1024 * 300 * 4, BASS_POS_BYTE );
-    float fft[1024];
-    qDebug() << BASS_ChannelGetData( channel, fft, BASS_DATA_FLOAT );
-    checkError();
-
-
-    for ( int i = 0 ; i < 512 ; i++ ) {
-        onset.append( fft[i] );
-    }
-
-//    QVector<float> fft2 = Transform::FFT( this->getPCMDataBlock( 300 ) );
-
-    qDebug() << onset;
-
-    qDebug() << this->getPCMDataBlock( 300 );
-//    qDebug() << fft2;
-
-
+    onset = peaks;
 }
 
 int Audio::checkError() {

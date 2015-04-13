@@ -42,6 +42,12 @@ private slots:
     void                                seek( double seconds );
     void                                updateSeekInfo();
 
+    //plot
+    void                                updateShowControls();
+    void                                showByRadioButton();
+    void                                showOnset();
+    void                                showCurrentSampleBlock();
+
 
 
 

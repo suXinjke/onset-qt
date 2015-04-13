@@ -16,14 +16,14 @@ public:
     explicit                            AudioPlot( QWidget *parent = 0 );
 
     void                                setAudio( Audio *audio );
-    void                                loadPCMData( int step = 1 );
+//    void                                loadPCMData( int step = 1 );
     void                                loadPCMData( const QVector<float> &pcm );
     void                                loadPCMBlock( int index, int step = 1, int blockSize = 1024 );
-    void                                loadOnset( int step = 1 );
+    void                                loadOnset();
     void                                setPositionInSeconds( double seconds );
 
 public slots:
-    void                                resetRange();
+    void                                resetRange( bool detectMinMaxY = true );
 
 private:
     Audio                               *audio;
@@ -33,6 +33,7 @@ private:
     QVector<double>                     x;
     QVector<double>                     y;
     QString                             cursorCoordinates;
+    double                              seconds;
 
     void                                paintEvent( QPaintEvent *event );
 

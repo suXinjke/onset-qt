@@ -13,7 +13,7 @@ Onset::Onset( QWidget *parent ) :
     ui->audioPlot->setAudio( audio );
 
     seekTimer = new QTimer( this );
-    seekTimer->setInterval( 50 );
+    seekTimer->setInterval( 30 );
     connect( seekTimer, SIGNAL( timeout() ), this, SLOT( updateSeekInfo() ) );
 
     connect( ui->playButton, SIGNAL( clicked() ), this, SLOT( play() ) );
@@ -23,6 +23,12 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->loadAudioFileAction, SIGNAL( triggered() ), this, SLOT( loadAudioFile() ) );
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
+
+    connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showOnset() ) );
+    connect( ui->sampleBlockViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showCurrentSampleBlock() ) );
+
+    connect( ui->sampleBlockSizeComboBox, SIGNAL( currentIndexChanged( int ) ), this, SLOT( showCurrentSampleBlock() ) );
+    connect( ui->sampleBlockIndexSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showCurrentSampleBlock() ) );
 
 //    QVector<float> pcm;
 //    pcm << 1.0 << 1.0 << 1.0 << 1.0 << 0.0 << 0.0 << 0.0 << 0.0;
@@ -57,7 +63,10 @@ void Onset::loadAudioFile( const QString &audioFilePath ) {
     ui->audioSeekSlider->setMaximum( audioDuration );
     this->updateSeekInfo();
 
-    ui->audioPlot->loadOnset();
+    ui->sampleBlockIndexSpinBox->setValue( 0 );
+
+    this->updateShowControls();
+    this->showByRadioButton();
     this->play();
 }
 
@@ -97,6 +106,42 @@ void Onset::updateSeekInfo() {
     this->updateSeekSlider( audioPosition );
     this->updateSeekLabel( audioPosition );
     ui->audioPlot->setPositionInSeconds( audioPosition );
+}
+
+void Onset::updateShowControls() {
+    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
+    int blockIndex = ui->sampleBlockIndexSpinBox->value();
+    int blockCount = audio->getSampleBlockCount( blockSize );
+
+    ui->currentSampleBlockLabel->setText( QString( "%1 / %2" ).arg( blockIndex ).arg( blockCount - 1 ) );
+    ui->sampleBlockIndexSpinBox->setMaximum( blockCount - 1 );
+}
+
+void Onset::showByRadioButton() {
+    if ( ui->onsetViewModeRadioButton->isChecked() ) {
+        this->showOnset();
+    } else if ( ui->sampleBlockViewModeRadioButton->isChecked() ) {
+        this->showCurrentSampleBlock();
+    }
+}
+
+void Onset::showOnset() {
+    if ( !ui->onsetViewModeRadioButton->isChecked() ) {
+        return;
+    }
+    ui->audioPlot->loadOnset();
+}
+
+void Onset::showCurrentSampleBlock() {
+    if ( !ui->sampleBlockViewModeRadioButton->isChecked() ) {
+        return;
+    }
+
+    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
+    int blockIndex = ui->sampleBlockIndexSpinBox->value();
+
+    this->updateShowControls();
+    ui->audioPlot->loadPCMBlock( blockIndex, 1, blockSize );
 }
 
 void Onset::updateSeekSlider( double audioPosition ) {
