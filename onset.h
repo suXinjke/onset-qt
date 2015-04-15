@@ -13,6 +13,15 @@ namespace Ui {
     class Onset;
 }
 
+    enum VIEW_MODE {
+        VIEW_MODE_ONSET,
+        VIEW_MODE_WAVEFORM,
+        VIEW_MODE_FFT,
+        VIEW_MDOE_FFT_PHASE,
+        VIEW_MODE_FFT_RAW_REAL,
+        VIEW_MODE_FFT_RAW_IMAGINARY
+    };
+
 class Onset : public QMainWindow {
     Q_OBJECT
 
@@ -25,7 +34,14 @@ private:
 
     Audio                               *audio;
     QTimer                              *seekTimer;
-    int                                 lastAutoAudioPlotAccuracyIndex;
+
+    int                                 lastOnsetProcessingSteps;
+    int                                 lastOnsetThresholdWindowSize;
+    float                               lastOnsetMultiplier;
+    int                                 lastOnsetLowFreqFilter;
+    int                                 lastOnsetHighFreqFilter;
+    bool                                lastOnsetWindow;
+    VIEW_MODE                           lastViewMode;
 
     double                              audioDuration;
     void                                updateSeekSlider( double audioPosition );
@@ -44,9 +60,15 @@ private slots:
 
     //plot
     void                                updateShowControls();
+    void                                updateOnsetFilter();
     void                                showByRadioButton();
     void                                showOnset();
+    void                                showWaveform();
     void                                showCurrentSampleBlock();
+    void                                showFFT();
+    void                                showFFTPhase();
+    void                                showFFTRawReal();
+    void                                showFFTRawImaginary();
 
 
 

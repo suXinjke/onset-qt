@@ -17,15 +17,18 @@ SOURCES += main.cpp\
     qcustomplot.cpp \
     audio.cpp \
     audioplot.cpp \
-    transform.cpp
+    transform.cpp \
+    sampleprocessingdialog.cpp
 
 HEADERS  += onset.h \
     qcustomplot.h \
     audio.h \
     audioplot.h \
-    transform.h
+    transform.h \
+    sampleprocessingdialog.h
 
-FORMS    += onset.ui
+FORMS    += onset.ui \
+    sampleprocessingdialog.ui
 
 LIBS     += -L$$PWD -lbass
 

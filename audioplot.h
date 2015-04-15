@@ -7,33 +7,44 @@
 class AudioPlot : public QCustomPlot {
     Q_OBJECT
 public:
-    enum                                X_AXIS_INFORMATION {
-        X_AXIS_INFORMATION_SAMPLE_INDEX,
-        X_AXIS_INFORMATION_SECONDS,
-        X_AXIS_INFORMATION_MINUTES_SECONDS
-    };
 
     explicit                            AudioPlot( QWidget *parent = 0 );
 
     void                                setAudio( Audio *audio );
-//    void                                loadPCMData( int step = 1 );
     void                                loadPCMData( const QVector<float> &pcm );
-    void                                loadPCMBlock( int index, int step = 1, int blockSize = 1024 );
+    void                                loadWaveform( int step = 4410 );
+    void                                loadPCMBlock( int index, int blockSize = 1024 );
+    void                                loadFFTBlock( int index, int blockSize = 1024 );
+    void                                loadFFTPhaseBlock( int index, int blockSize = 1024 );
+    void                                loadFFTBlockRaw(int index, int blockSize = 1024, bool imaginary = false );
     void                                loadOnset();
     void                                setPositionInSeconds( double seconds );
+    QString                             getFundamentalFrequency() const;
+    QString                             getAverageVolume( double seconds ) ;
+
+    double                              getCurrentValue( double seconds );
+
 
 public slots:
-    void                                resetRange( bool detectMinMaxY = true );
+    void                                resetRange();
+    void                                resetRangeX( bool replot = true );
+    void                                resetRangeY( bool replot = true );
+
 
 private:
     Audio                               *audio;
     QCPGraph                            *pcmGraph;
-    QCPItemStraightLine                 *position;
+    QCPGraph                            *waveformGraph;
 
     QVector<double>                     x;
     QVector<double>                     y;
     QString                             cursorCoordinates;
+    QString                             plotInfo;
+    QString                             averageVolume;
     double                              seconds;
+    bool                                showPosition;
+    bool                                showAverageVolume;
+    int                                 tickTimer;
 
     void                                paintEvent( QPaintEvent *event );
 

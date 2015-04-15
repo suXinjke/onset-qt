@@ -5,5 +5,9 @@
         <file>control_stop.png</file>
         <file>folder_go.png</file>
         <file>generate.png</file>
+        <file>dance.gif</file>
+        <file>autozoom.png</file>
+        <file>autozoomX.png</file>
+        <file>autozoomY.png</file>
     </qresource>
 </RCC>

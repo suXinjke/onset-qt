@@ -1,7 +1,8 @@
 #include "audio.h"
 
 Audio::Audio( QObject *parent ) :
-    QObject( parent ), stream( 0 ) {
+    QObject( parent ), stream( 0 ),
+    ONSET_PROCESSING_STEPS( 5 ), ONSET_THRESHOLD_WINDOW_SIZE( 20 ), ONSET_MULTIPLIER( 1.5f ), ONSET_WINDOW( 0 ), ONSET_FILTER_LOW( 0 ), ONSET_FILTER_HIGH( 0 ) {
 
     if ( !BASS_Init( -1, 44100, 0, NULL, NULL ) ) {
         this->checkError();
@@ -28,8 +29,7 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     BASS_ChannelGetInfo( stream, &channelInfo );
     this->audioFilePath = audioFilePath;
 
-    this->fillOnset();
-    this->fillPCM( );
+    this->fillPCM();
     return true;
 }
 
@@ -147,22 +147,33 @@ int Audio::getSampleCount() {
         return -1;
     }
 
-    int frequency = this->getAudioFrequency();
+    QWORD length = BASS_ChannelGetLength( stream, BASS_POS_BYTE );
     int channels = this->getAudioChannels();
-    double duration = this->getAudioDuration();
+    length /= channels * sizeof( float );
 
-    double samples = frequency * duration;
-    if ( channels == 1 ) {
-        samples /= 2.0;
-    }
-
-    return qCeil( samples );
+    return length;
 }
 
 int Audio::getSampleBlockCount( int sampleBlockSize ) {
     double sampleCount = this->getSampleCount();
 
     return qCeil( sampleCount / sampleBlockSize );
+}
+
+QString Audio::getSampleBlockDuration( int index, int blockSize ) {
+    if ( index < 0 || index >= this->getSampleBlockCount( blockSize ) ) {
+        return QString();
+    }
+
+    double frequency = this->getAudioFrequency();
+    int sampleCount = this->getSampleCount();
+    int sampleBegin = index * blockSize;
+    int sampleEnd = qMin( sampleBegin + blockSize, sampleCount );
+
+    double beginSeconds = sampleBegin / frequency;
+    double endSeconds = sampleEnd / frequency;
+
+    return QString( "%1 / %2" ).arg( QString::number( beginSeconds, 'f', 3 ) ).arg( QString::number( endSeconds, 'f', 3 ) );
 }
 
 QVector<float> Audio::getSampleBlock( int index, int blockSize ) {
@@ -186,8 +197,94 @@ QVector<float> Audio::getSampleBlock( int index, int blockSize ) {
     return sampleBlock;
 }
 
+QVector<float> Audio::getFFTBlock( int index, int blockSize , bool raw ) {
+    int FFT_MODE;
+    switch ( blockSize ) {
+        case 256:
+            FFT_MODE = BASS_DATA_FFT256;
+            break;
+        case 512:
+            FFT_MODE = BASS_DATA_FFT512;
+            break;
+        case 1024:
+            FFT_MODE = BASS_DATA_FFT1024;
+            break;
+        case 2048:
+            FFT_MODE = BASS_DATA_FFT2048;
+            break;
+        case 4096:
+            FFT_MODE = BASS_DATA_FFT4096;
+            break;
+        case 8192:
+            FFT_MODE = BASS_DATA_FFT8192;
+            break;
+        default:
+            return QVector<float>();
+    }
+
+    QVector<float> sampleBlock = this->getSampleBlock( index, blockSize );
+    int channels = this->getAudioChannels();
+    int actualBlockSize = sampleBlock.length() / 2;
+    int frequency = this->getAudioFrequency();
+
+    HSAMPLE sample = BASS_SampleCreate( actualBlockSize * channels * sizeof( float ), frequency, channels, 1, BASS_SAMPLE_FLOAT );
+    BASS_SampleSetData( sample, sampleBlock.data() );
+
+    HCHANNEL sampleChannel = BASS_SampleGetChannel( sample, true );
+
+    int fftSize = raw ? blockSize * 2 : blockSize / 2;
+    int RAW_DATA = raw ? BASS_DATA_FFT_COMPLEX : 0;
+    QVector<float> fft( fftSize );
+    BASS_ChannelGetData( sampleChannel, fft.data(), BASS_DATA_FLOAT | FFT_MODE | RAW_DATA );
+
+    BASS_SampleFree( sample );
+
+    if ( ONSET_FILTER_LOW != 0 || ONSET_FILTER_HIGH != 0 ) {
+        int lowFreqIndex = ( ( double ) ONSET_FILTER_LOW / ( frequency / 2.0 ) ) * fftSize;;
+        int highFreqIndex = ( ( double ) ONSET_FILTER_HIGH / ( frequency / 2.0 ) ) * fftSize;
+
+        for ( int i = lowFreqIndex ; i >= 0 ; i-- ) {
+            fft[i] = 0.0f;
+        }
+        for ( int i = highFreqIndex ; i < fftSize ; i++ ) {
+            fft[i] = 0.0f;
+        }
+    }
+
+    return fft;
+}
+
 QVector<float> Audio::getOnset() const {
     return onset;
+}
+
+QVector<float> Audio::getPCM() const {
+    return pcm;
+}
+
+void Audio::setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler , int processingSteps , bool window ) {
+    if ( onsetThresholdWindowSize < 1 ||
+            onsetMultipler < 1.0 || onsetMultipler > 2.0 ||
+            processingSteps < 1 || processingSteps > 5 ) {
+        return;
+    }
+    ONSET_PROCESSING_STEPS = processingSteps;
+    ONSET_THRESHOLD_WINDOW_SIZE = onsetThresholdWindowSize;
+    ONSET_MULTIPLIER = onsetMultipler;
+    ONSET_WINDOW = window ? 0 : BASS_DATA_FFT_NOWINDOW;
+    this->fillOnset();
+}
+
+bool Audio::setOnsetFilter( int lowFreq, int highFreq ) {
+    int audioFreq = this->getAudioFrequency();
+    if ( lowFreq < 0 || highFreq < 0 || lowFreq > highFreq || highFreq > audioFreq ) {
+        return false;
+    }
+
+    ONSET_FILTER_LOW = lowFreq;
+    ONSET_FILTER_HIGH = highFreq;
+
+    return true;
 }
 
 void Audio::fillPCM() {
@@ -215,6 +312,7 @@ void Audio::fillPCM() {
 }
 
 void Audio::fillOnset() {
+
     HSTREAM decodeChannel = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE );
 
     if ( !decodeChannel ) {
@@ -229,15 +327,37 @@ void Audio::fillOnset() {
 
     long length = BASS_ChannelGetLength( decodeChannel, BASS_POS_BYTE );
     int channels = this->getAudioChannels();
+    int frequency = this->getAudioFrequency();
     long step = 1024 * sizeof( float ) * channels;
+
+    SampleProcessingDialog sampleProcessingDialog;
+    sampleProcessingDialog.setWindowModality( Qt::WindowModal );
+    sampleProcessingDialog.setSamplesToProcess( ( length / step ) * ( ONSET_PROCESSING_STEPS ) );
+    sampleProcessingDialog.show();
+
+
     for ( long i = step ; i < length; i += step ) {
         float fft[256];
         float nextFft[256];
         BASS_ChannelSetPosition( decodeChannel, i - step, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( decodeChannel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+        BASS_ChannelGetData( decodeChannel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 | ONSET_WINDOW );
 
         BASS_ChannelSetPosition( decodeChannel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( decodeChannel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 );
+        BASS_ChannelGetData( decodeChannel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 | ONSET_WINDOW );
+
+        if ( ONSET_FILTER_LOW != 0 || ONSET_FILTER_HIGH != 0 ) {
+            int lowFreqIndex = ( ( double ) ONSET_FILTER_LOW / ( frequency / 2.0 ) ) * 256;
+            int highFreqIndex = ( ( double ) ONSET_FILTER_HIGH / ( frequency / 2.0 ) ) * 256;
+
+            for ( int i = lowFreqIndex ; i >= 0 ; i-- ) {
+                fft[i] = 0.0;
+                nextFft[i] = 0.0;
+            }
+            for ( int i = highFreqIndex ; i < 256 ; i++ ) {
+                fft[i] = 0.0;
+                nextFft[i] = 0.0;
+            }
+        }
 
         float flux = 0.0;
         for ( int i = 0 ; i < 256 ; i++ ) {
@@ -246,22 +366,34 @@ void Audio::fillOnset() {
         }
 
         spectralFlux.append( flux );
+        sampleProcessingDialog.addSampleProcessed();
+
     }
+
+
 
     BASS_StreamFree( decodeChannel );
 
-    int THRESHOLD_WINDOW_SIZE = 20;
-    float MULTIPLIER = 1.5f;
+    if ( ONSET_PROCESSING_STEPS == 1 ) {
+        onset = spectralFlux;
+        return;
+    }
 
     for ( int i = 0; i < spectralFlux.length() ; i++ ) {
-        int start = qMax( 0, i - THRESHOLD_WINDOW_SIZE );
-        int end = qMin( spectralFlux.length() - 1, i + THRESHOLD_WINDOW_SIZE );
+        int start = qMax( 0, i - ONSET_THRESHOLD_WINDOW_SIZE );
+        int end = qMin( spectralFlux.length() - 1, i + ONSET_THRESHOLD_WINDOW_SIZE );
         float mean = 0;
         for ( int j = start ; j <= end ; j++ ) {
             mean += spectralFlux.at( j );
         }
         mean /= ( end - start );
-        threshold.append( mean * MULTIPLIER );
+        threshold.append( mean * ONSET_MULTIPLIER );
+        sampleProcessingDialog.addSampleProcessed();
+    }
+
+    if ( ONSET_PROCESSING_STEPS == 2 ) {
+        onset = threshold;
+        return;
     }
 
     for ( int i = 0; i < threshold.size(); i++ ) {
@@ -270,6 +402,12 @@ void Audio::fillOnset() {
         } else {
             prunnedSpectralFlux.append( 0.0 );
         }
+        sampleProcessingDialog.addSampleProcessed();
+    }
+
+    if ( ONSET_PROCESSING_STEPS == 3 ) {
+        onset = prunnedSpectralFlux;
+        return;
     }
 
     for ( int i = 0; i < prunnedSpectralFlux.size() - 1; i++ ) {
@@ -278,9 +416,37 @@ void Audio::fillOnset() {
         } else {
             peaks.append( 0.0 );
         }
+        sampleProcessingDialog.addSampleProcessed();
     }
 
-    onset = peaks;
+    if ( ONSET_PROCESSING_STEPS == 4 ) {
+        onset = peaks;
+        return;
+    }
+
+    int PEAK_CLEAN_WINDOW = 4;
+    for ( int i = 0 ; i < peaks.size() - PEAK_CLEAN_WINDOW ; i++ ) {
+        int peakCount = 0;
+        for ( int j = 0 ; j < PEAK_CLEAN_WINDOW ; j++ ) {
+            if ( peaks.at( i + j ) > 0.0 ) {
+                peakCount++;
+            }
+        }
+        int mid = peakCount % 2 == 0 ? i + peakCount / 2 : i + peakCount / 2 + 1;
+        for ( int i = 0 ; i < peakCount / 2 ; i++ ) {
+            peaks[mid + i] = 0.0;
+            peaks[mid - i] = 0.0;
+        }
+        sampleProcessingDialog.addSampleProcessed();
+    }
+
+    if ( ONSET_PROCESSING_STEPS == 5 ) {
+        onset = peaks;
+        return;
+    }
+
+    sampleProcessingDialog.accept();
+
 }
 
 int Audio::checkError() {

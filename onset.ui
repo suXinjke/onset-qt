@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>760</width>
-    <height>495</height>
+    <width>1111</width>
+    <height>625</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -113,9 +113,239 @@
           </widget>
          </item>
          <item>
+          <widget class="QRadioButton" name="waveformViewModeRadioButton">
+           <property name="text">
+            <string>Waveform</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QRadioButton" name="sampleBlockViewModeRadioButton">
            <property name="text">
             <string>Sample block</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftViewModeRadioButton">
+           <property name="text">
+            <string>FFT</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftPhaseViewModeRadioButton">
+           <property name="text">
+            <string>FFT Phase</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftRawRealViewModeRadioButton">
+           <property name="text">
+            <string>FFT Raw - Real</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftRawImaginaryViewModeRadioButton">
+           <property name="text">
+            <string>FFT Raw - Imaginary</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="title">
+         <string>Onset</string>
+        </property>
+        <layout class="QFormLayout" name="formLayout_2">
+         <property name="fieldGrowthPolicy">
+          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Этапов обработки</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="onsetProcessingStepsSpinBox">
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>5</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Threshold window size</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSpinBox" name="onsetThresholdWindowSizeSpinBox">
+           <property name="correctionMode">
+            <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>2048</number>
+           </property>
+           <property name="value">
+            <number>20</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Multiplier</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QDoubleSpinBox" name="onsetMultiplierSpinBox">
+           <property name="correctionMode">
+            <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="decimals">
+            <number>1</number>
+           </property>
+           <property name="minimum">
+            <double>1.000000000000000</double>
+           </property>
+           <property name="maximum">
+            <double>2.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>1.500000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Фильтр</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QSpinBox" name="onsetLowFreqFilterSpinBox">
+           <property name="minimumSize">
+            <size>
+             <width>59</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="maximum">
+            <number>0</number>
+           </property>
+           <property name="value">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QSpinBox" name="onsetHighFreqFilterSpinBox">
+           <property name="minimumSize">
+            <size>
+             <width>59</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="maximum">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0" colspan="2">
+          <widget class="QCheckBox" name="onsetWindowCheckbox">
+           <property name="text">
+            <string>Окно</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_3">
+        <property name="title">
+         <string>Waveform</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="waveformStepSpinBox">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="correctionMode">
+            <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>16384</number>
+           </property>
+           <property name="value">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Шаг</string>
            </property>
           </widget>
          </item>
@@ -175,6 +405,21 @@
              <string>1024</string>
             </property>
            </item>
+           <item>
+            <property name="text">
+             <string>2048</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>4096</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>8192</string>
+            </property>
+           </item>
           </widget>
          </item>
          <item row="1" column="0">
@@ -186,6 +431,12 @@
          </item>
          <item row="1" column="1">
           <widget class="QSpinBox" name="sampleBlockIndexSpinBox">
+           <property name="correctionMode">
+            <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+           </property>
+           <property name="keyboardTracking">
+            <bool>false</bool>
+           </property>
            <property name="maximum">
             <number>0</number>
            </property>
@@ -195,6 +446,16 @@
           <widget class="QLabel" name="currentSampleBlockLabel">
            <property name="text">
             <string>0 / 0</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2">
+          <widget class="QLabel" name="currentSampleBlockDurationLabel">
+           <property name="text">
+            <string>0 - 0</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
@@ -238,6 +499,10 @@
     <bool>false</bool>
    </attribute>
    <addaction name="loadAudioFileAction"/>
+   <addaction name="separator"/>
+   <addaction name="resetRangeAction"/>
+   <addaction name="resetRangeXAction"/>
+   <addaction name="resetRangeYAction"/>
   </widget>
   <action name="loadAudioFileAction">
    <property name="icon">
@@ -246,6 +511,33 @@
    </property>
    <property name="text">
     <string>Load Audio</string>
+   </property>
+  </action>
+  <action name="resetRangeAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoom.png</normaloff>:/autozoom.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Range</string>
+   </property>
+  </action>
+  <action name="resetRangeXAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoomX.png</normaloff>:/autozoomX.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Range X</string>
+   </property>
+  </action>
+  <action name="resetRangeYAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoomY.png</normaloff>:/autozoomY.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Range Y</string>
    </property>
   </action>
  </widget>
