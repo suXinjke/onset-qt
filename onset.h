@@ -64,6 +64,7 @@ private slots:
     void                                showByRadioButton();
     void                                showOnset();
     void                                showWaveform();
+    void                                showStress();
     void                                showCurrentSampleBlock();
     void                                showFFT();
     void                                showFFTPhase();

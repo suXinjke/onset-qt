@@ -36,6 +36,7 @@ Onset::Onset( QWidget *parent ) :
 
     connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showOnset() ) );
     connect( ui->waveformViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showWaveform() ) );
+    connect( ui->stressViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showStress() ) );
     connect( ui->sampleBlockViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showCurrentSampleBlock() ) );
     connect( ui->fftViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFT() ) );
     connect( ui->fftPhaseViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTPhase() ) );
@@ -50,6 +51,7 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->onsetWindowCheckbox, SIGNAL( toggled( bool ) ), this, SLOT( showByRadioButton() ) );
 
     connect( ui->waveformStepSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
+    connect( ui->stressWindowSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
 
     connect( ui->sampleBlockSizeComboBox, SIGNAL( currentIndexChanged( int ) ), this, SLOT( showByRadioButton() ) );
     connect( ui->sampleBlockIndexSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
@@ -170,6 +172,8 @@ void Onset::showByRadioButton() {
         this->showOnset();
     } else if ( ui->waveformViewModeRadioButton->isChecked() ) {
         this->showWaveform();
+    } else if ( ui->stressViewModeRadioButton->isChecked() ) {
+        this->showStress();
     } else if ( ui->sampleBlockViewModeRadioButton->isChecked() ) {
         this->showCurrentSampleBlock();
     } else if ( ui->fftViewModeRadioButton->isChecked() ) {
@@ -215,6 +219,16 @@ void Onset::showWaveform() {
 
     int step = ui->waveformStepSpinBox->value();
     ui->audioPlot->loadWaveform( step );
+}
+
+void Onset::showStress() {
+    if ( !ui->stressViewModeRadioButton->isChecked() ) {
+        return;
+    }
+
+    int step = ui->waveformStepSpinBox->value();
+    int stressWindow = ui->stressWindowSpinBox->value();
+    ui->audioPlot->loadStress( stressWindow, step );
 }
 
 void Onset::showCurrentSampleBlock() {

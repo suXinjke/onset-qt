@@ -13,10 +13,11 @@ public:
     void                                setAudio( Audio *audio );
     void                                loadPCMData( const QVector<float> &pcm );
     void                                loadWaveform( int step = 4410 );
+    void                                loadStress( int window = 1024, int step = 4410 );
     void                                loadPCMBlock( int index, int blockSize = 1024 );
     void                                loadFFTBlock( int index, int blockSize = 1024 );
     void                                loadFFTPhaseBlock( int index, int blockSize = 1024 );
-    void                                loadFFTBlockRaw(int index, int blockSize = 1024, bool imaginary = false );
+    void                                loadFFTBlockRaw( int index, int blockSize = 1024, bool imaginary = false );
     void                                loadOnset();
     void                                setPositionInSeconds( double seconds );
     QString                             getFundamentalFrequency() const;
@@ -26,6 +27,7 @@ public:
 
 
 public slots:
+    void                                runningAverage( int window = 128 );
     void                                resetRange();
     void                                resetRangeX( bool replot = true );
     void                                resetRangeY( bool replot = true );
@@ -44,6 +46,7 @@ private:
     double                              seconds;
     bool                                showPosition;
     bool                                showAverageVolume;
+    double                              meanAll;
     int                                 tickTimer;
 
     void                                paintEvent( QPaintEvent *event );

@@ -6,6 +6,7 @@ AudioPlot::AudioPlot( QWidget *parent ) :
     seconds( 0.0 ),
     showPosition( true ),
     showAverageVolume( false ),
+    meanAll( 0.0 ),
     tickTimer( 0 ) {
 
     pcmGraph = this->addGraph();
@@ -47,6 +48,7 @@ void AudioPlot::loadPCMData( const QVector<float> &pcm ) {
 
     showPosition = false;
     showAverageVolume = false;
+    meanAll = 0.0;
 
     this->replot();
 }
@@ -63,6 +65,7 @@ void AudioPlot::loadWaveform( int step ) {
     if ( N <= 0 ) {
         return;
     }
+
 
 //    QVector<float> pcm2;
 //    for ( int i = 0; i < N ; i += step ) {
@@ -88,6 +91,7 @@ void AudioPlot::loadWaveform( int step ) {
 //        pcm.append( mean );
 //    }
 
+
     int frequency = audio->getAudioFrequency();
     int channels = audio->getAudioChannels();
 
@@ -95,7 +99,8 @@ void AudioPlot::loadWaveform( int step ) {
     y.resize( qCeil( ( double ) N / step ) );
     for ( int i = 0, p = 0 ; i < N ; i += step ) {
         x[p] = ( double ) i / frequency / channels;
-        y[p] = qAbs( pcm.at( i ) );
+        double value = pcm.at( i );
+        y[p] = value;
         p++;
     }
 
@@ -111,6 +116,65 @@ void AudioPlot::loadWaveform( int step ) {
     pcmGraph->setData( x, y );
     showPosition = true;
     showAverageVolume = true;
+    meanAll = 0.0;
+
+    plotInfo = "";
+
+    this->replot();
+}
+
+void AudioPlot::loadStress( int window, int step ) {
+    QVector<float> pcm = audio->getPCM();
+    int N = pcm.length();
+    if ( N <= 0 ) {
+        return;
+    }
+
+    int frequency = audio->getAudioFrequency();
+    int channels = audio->getAudioChannels();
+
+    QVector<float> pcmShortened;
+    for ( int i = 0; i < N ; i += step ) {
+        pcmShortened.append( pcm.at( i ) );
+    }
+
+    N = pcmShortened.length();
+
+    QVector<float> pcmFiltered;
+    for ( int i = 0; i < N ; i ++ ) {
+        int start = qMax( 0, i - window );
+        int end = qMin( N - 1, i + window );
+        double mean = 0;
+        for ( int j = start ; j <= end ; j++ ) {
+            mean += pcmShortened.at( j ) * pcmShortened.at( j );
+        }
+        mean /= ( end - start );
+        mean = qSqrt( mean );
+        pcmFiltered.append( mean );
+    }
+
+    N = pcmFiltered.length();
+
+    x.resize( N );
+    y.resize( N );
+    for ( int i = 0, p = 0 ; i < N ; i ++ ) {
+        x[p] = ( double ) ( p * step ) / frequency / channels;
+        double value = pcmFiltered.at( i );
+        y[p] = value;
+        p++;
+    }
+
+    meanAll = 0.0;
+    for ( int i = 0; i < pcm.length() ; i++ ) {
+        meanAll += pcm.at( i ) * pcm.at( i );
+    }
+    meanAll /= ( pcm.length() );
+    meanAll = qSqrt( meanAll );
+
+    pcmGraph->clearData();
+    pcmGraph->setData( x, y );
+    showPosition = true;
+    showAverageVolume = false;
 
     plotInfo = "";
 
@@ -136,7 +200,7 @@ void AudioPlot::loadPCMBlock( int index, int blockSize ) {
     pcmGraph->setData( x, y );
     showPosition = false;
     showAverageVolume = false;
-    this->yAxis->setRange( -1.0, 1.0 );
+    meanAll = 0.0;
 
     plotInfo = "";
 
@@ -172,6 +236,7 @@ void AudioPlot::loadFFTBlock( int index, int blockSize ) {
     pcmGraph->setData( x, y );
     showPosition = false;
     showAverageVolume = false;
+    meanAll = 0.0;
 
     plotInfo = this->getFundamentalFrequency();
 
@@ -205,6 +270,7 @@ void AudioPlot::loadFFTPhaseBlock( int index, int blockSize ) {
     pcmGraph->setData( x, y );
     showPosition = false;
     showAverageVolume = false;
+    meanAll = 0.0;
 
     this->replot();
 }
@@ -231,6 +297,7 @@ void AudioPlot::loadFFTBlockRaw( int index, int blockSize, bool imaginary ) {
     pcmGraph->setData( x, y );
     showPosition = false;
     showAverageVolume = false;
+    meanAll = 0.0;
 
     this->replot();
 }
@@ -247,8 +314,9 @@ void AudioPlot::loadOnset() {
     x.resize( N );
     y.resize( N );
     for ( int i = 0, p = 0 ; i < N ; i ++ ) {
-        x[p] = i * ( 1024.0 / frequency );
+        x[p] = i * ( 2048.0 / frequency );
         y[p] = pcm.at( i );
+
         p++;
     }
 
@@ -256,6 +324,7 @@ void AudioPlot::loadOnset() {
     pcmGraph->setData( x, y );
     showPosition = true;
     showAverageVolume = false;
+    meanAll = 0.0;
 
     plotInfo = "";
 
@@ -322,6 +391,37 @@ double AudioPlot::getCurrentValue( double seconds ) {
     return pcmGraph->data()->upperBound( seconds ).value().value;
 }
 
+void AudioPlot::runningAverage( int window ) {
+    QVector<double> newY;
+
+    for ( int i = 0; i < y.length() ; i++ ) {
+        int start = qMax( 0, i - window );
+        int end = qMin( y.length() - 1, i + window );
+        double mean = 0;
+        for ( int j = start ; j <= end ; j++ ) {
+            mean += y.at( j ) * y.at( j );
+        }
+        mean /= ( end - start );
+        mean = qSqrt( mean );
+        newY.append( mean * 1.5 );
+    }
+
+    y = newY;
+
+    meanAll = 0.0;
+    for ( int i = 0; i < y.length() ; i++ ) {
+        meanAll += y.at( i ) * y.at( i );
+    }
+    meanAll /= ( y.length() );
+    meanAll = qSqrt( meanAll );
+    meanAll += meanAll * 0.01;
+
+
+    pcmGraph->clearData();
+    pcmGraph->setData( x, y );
+    this->replot();
+}
+
 void AudioPlot::resetRange() {
     this->resetRangeX( false );
     this->resetRangeY( false );
@@ -381,6 +481,12 @@ void AudioPlot::paintEvent( QPaintEvent *event ) {
         painter.setPen( Qt::red );
         double x = this->xAxis->coordToPixel( seconds );
         painter.drawLine( x, 0, x, this->height() );
+    }
+
+    if ( meanAll > 0.0 ) {
+        painter.setPen( Qt::darkGreen );
+        double y = this->yAxis->coordToPixel( meanAll );
+        painter.drawLine( 0, y, this->width(), y );
     }
 
 //    int redColor = ( tickTimer / 16.0 ) * 255;

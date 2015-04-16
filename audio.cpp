@@ -293,6 +293,7 @@ void Audio::fillPCM() {
     }
 
     HSAMPLE sample = BASS_SampleLoad( false, audioFilePath.toStdString().c_str(), 0, 0, 1, BASS_SAMPLE_FLOAT );
+    this->checkError();
     BASS_SAMPLE sampleInfo;
     if ( !BASS_SampleGetInfo( sample, &sampleInfo ) ) {
         this->checkError();
@@ -328,7 +329,7 @@ void Audio::fillOnset() {
     long length = BASS_ChannelGetLength( decodeChannel, BASS_POS_BYTE );
     int channels = this->getAudioChannels();
     int frequency = this->getAudioFrequency();
-    long step = 1024 * sizeof( float ) * channels;
+    long step = 2048 * sizeof( float ) * channels;
 
     SampleProcessingDialog sampleProcessingDialog;
     sampleProcessingDialog.setWindowModality( Qt::WindowModal );
@@ -337,30 +338,30 @@ void Audio::fillOnset() {
 
 
     for ( long i = step ; i < length; i += step ) {
-        float fft[256];
-        float nextFft[256];
+        float fft[512];
+        float nextFft[512];
         BASS_ChannelSetPosition( decodeChannel, i - step, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( decodeChannel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT512 | ONSET_WINDOW );
+        BASS_ChannelGetData( decodeChannel, fft, BASS_DATA_FLOAT | BASS_DATA_FFT1024 | ONSET_WINDOW );
 
         BASS_ChannelSetPosition( decodeChannel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
-        BASS_ChannelGetData( decodeChannel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT512 | ONSET_WINDOW );
+        BASS_ChannelGetData( decodeChannel, nextFft, BASS_DATA_FLOAT | BASS_DATA_FFT1024 | ONSET_WINDOW );
 
         if ( ONSET_FILTER_LOW != 0 || ONSET_FILTER_HIGH != 0 ) {
-            int lowFreqIndex = ( ( double ) ONSET_FILTER_LOW / ( frequency / 2.0 ) ) * 256;
-            int highFreqIndex = ( ( double ) ONSET_FILTER_HIGH / ( frequency / 2.0 ) ) * 256;
+            int lowFreqIndex = ( ( double ) ONSET_FILTER_LOW / ( frequency / 2.0 ) ) * 512;
+            int highFreqIndex = ( ( double ) ONSET_FILTER_HIGH / ( frequency / 2.0 ) ) * 512;
 
             for ( int i = lowFreqIndex ; i >= 0 ; i-- ) {
                 fft[i] = 0.0;
                 nextFft[i] = 0.0;
             }
-            for ( int i = highFreqIndex ; i < 256 ; i++ ) {
+            for ( int i = highFreqIndex ; i < 512 ; i++ ) {
                 fft[i] = 0.0;
                 nextFft[i] = 0.0;
             }
         }
 
         float flux = 0.0;
-        for ( int i = 0 ; i < 256 ; i++ ) {
+        for ( int i = 0 ; i < 512 ; i++ ) {
             float value = nextFft[i] - fft[i];
             flux += value < 0 ? 0 : value;
         }
@@ -424,7 +425,23 @@ void Audio::fillOnset() {
         return;
     }
 
-    int PEAK_CLEAN_WINDOW = 4;
+//    int PEAK_CLEAN_WINDOW = 4;
+//    for ( int i = 0 ; i < peaks.size() - PEAK_CLEAN_WINDOW ; i++ ) {
+//        int peakCount = 0;
+//        for ( int j = 0 ; j < PEAK_CLEAN_WINDOW ; j++ ) {
+//            if ( peaks.at( i + j ) > 0.0 ) {
+//                peakCount++;
+//            }
+//        }
+//        int mid = peakCount % 2 == 0 ? i + peakCount / 2 : i + peakCount / 2 + 1;
+//        for ( int j = 0 ; j < peakCount / 2 ; j++ ) {
+//            peaks[mid + j] = 0.0;
+//            peaks[mid - j] = 0.0;
+//        }
+//        sampleProcessingDialog.addSampleProcessed();
+//    }
+
+    int PEAK_CLEAN_WINDOW = 3;
     for ( int i = 0 ; i < peaks.size() - PEAK_CLEAN_WINDOW ; i++ ) {
         int peakCount = 0;
         for ( int j = 0 ; j < PEAK_CLEAN_WINDOW ; j++ ) {
@@ -432,10 +449,10 @@ void Audio::fillOnset() {
                 peakCount++;
             }
         }
-        int mid = peakCount % 2 == 0 ? i + peakCount / 2 : i + peakCount / 2 + 1;
-        for ( int i = 0 ; i < peakCount / 2 ; i++ ) {
-            peaks[mid + i] = 0.0;
-            peaks[mid - i] = 0.0;
+        if ( peakCount > 1 ) {
+            for ( int j = 1 ; j < peakCount ; j++ ) {
+                peaks[i + j] = 0.0;
+            }
         }
         sampleProcessingDialog.addSampleProcessed();
     }
@@ -444,6 +461,14 @@ void Audio::fillOnset() {
         onset = peaks;
         return;
     }
+
+    //peak heights
+//    if ( value > 0.01 ) {
+//        y[p] = 1.0;
+//    } else {
+//        y[p] = 0.0;
+//    }
+    //
 
     sampleProcessingDialog.accept();
 
