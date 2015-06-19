@@ -10,6 +10,7 @@ AudioPlot::AudioPlot( QWidget *parent ) :
     tickTimer( 0 ) {
 
     pcmGraph = this->addGraph();
+    thresholdGraph = this->addGraph();
     this->xAxis->setRange( 0, 1 );
     this->yAxis->setRange( 0, 1 );
     this->setInteraction( QCP::iRangeDrag, true );
@@ -21,6 +22,13 @@ AudioPlot::AudioPlot( QWidget *parent ) :
 
     pcmGraph->setScatterStyle( QCPScatterStyle::ssDisc );
     pcmGraph->setLineStyle( QCPGraph::lsImpulse );
+//    thresholdGraph->setScatterStyle( QCPScatterStyle::ssDisc );
+//    thresholdGraph->setLineStyle( QCPGraph::lsImpulse );
+    thresholdGraph->setPen( QPen( Qt::darkYellow ) );
+    QColor transparentYellow( Qt::yellow );
+    transparentYellow.setAlpha( 200 );
+    QBrush goldBrush( transparentYellow );
+    thresholdGraph->setBrush( goldBrush );
 
     connect( this, SIGNAL( mousePress( QMouseEvent * ) ), this, SLOT( onRightClick( QMouseEvent * ) ) );
     connect( this, SIGNAL( mouseMove( QMouseEvent * ) ), this, SLOT( getCursorCoordinates( QMouseEvent * ) ) );
@@ -50,10 +58,11 @@ void AudioPlot::loadPCMData( const QVector<float> &pcm ) {
     showAverageVolume = false;
     meanAll = 0.0;
 
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
-void AudioPlot::loadWaveform( int step ) {
+void AudioPlot::loadWaveform( int step , bool applyWindow ) {
 //    QVector<float> pcmDef = audio->getPCM();
 //    int N = pcmDef.length();
 //    if ( N <= 0 ) {
@@ -64,6 +73,16 @@ void AudioPlot::loadWaveform( int step ) {
     int N = pcm.length();
     if ( N <= 0 ) {
         return;
+    }
+
+    if ( applyWindow ) {
+        for ( int i = 0; i < N; i += 1024 ) {
+            int begin = i;
+            int end = qMin( i + 1024, N - 1 );
+            for ( int j = begin ; j < end ; j++ ) {
+                pcm[j] *= ( 0.54f - 0.46f * qCos( 2 * M_PI * j / ( ( end - begin ) - 1 ) ) );
+            }
+        }
     }
 
 
@@ -119,7 +138,7 @@ void AudioPlot::loadWaveform( int step ) {
     meanAll = 0.0;
 
     plotInfo = "";
-
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
@@ -153,6 +172,7 @@ void AudioPlot::loadStress( int window, int step ) {
         pcmFiltered.append( mean );
     }
 
+
     N = pcmFiltered.length();
 
     x.resize( N );
@@ -177,7 +197,7 @@ void AudioPlot::loadStress( int window, int step ) {
     showAverageVolume = false;
 
     plotInfo = "";
-
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
@@ -203,7 +223,7 @@ void AudioPlot::loadPCMBlock( int index, int blockSize ) {
     meanAll = 0.0;
 
     plotInfo = "";
-
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
@@ -239,7 +259,7 @@ void AudioPlot::loadFFTBlock( int index, int blockSize ) {
     meanAll = 0.0;
 
     plotInfo = this->getFundamentalFrequency();
-
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
@@ -272,6 +292,7 @@ void AudioPlot::loadFFTPhaseBlock( int index, int blockSize ) {
     showAverageVolume = false;
     meanAll = 0.0;
 
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
@@ -283,6 +304,8 @@ void AudioPlot::loadFFTBlockRaw( int index, int blockSize, bool imaginary ) {
     }
 
 //    int halfFrequency = audio->getAudioFrequency() / 2;
+
+    qDebug() << fft.length();
 
     x.resize( N / 4 );
     y.resize( N / 4 );
@@ -299,11 +322,26 @@ void AudioPlot::loadFFTBlockRaw( int index, int blockSize, bool imaginary ) {
     showAverageVolume = false;
     meanAll = 0.0;
 
+    thresholdGraph->setVisible( false );
     this->replot();
 }
 
-void AudioPlot::loadOnset() {
-    QVector<float> pcm = audio->getOnset();
+void AudioPlot::loadOnset( int processingSteps ) {
+    QVector<float> pcm;
+    switch ( processingSteps ) {
+        case 1:
+        case 2:
+            pcm = audio->getSpectralFlux();
+            break;
+        case 3:
+            pcm = audio->getPrunnedSpectralFlux();
+            break;
+        case 4:
+            pcm = audio->getPeaks();
+            break;
+        default:
+            break;
+    }
     int N = pcm.length();
     if ( N <= 0 ) {
         return;
@@ -327,6 +365,24 @@ void AudioPlot::loadOnset() {
     meanAll = 0.0;
 
     plotInfo = "";
+
+
+    if ( processingSteps == 2 ) {
+        QVector<float> threshold = audio->getThreshold();
+        QVector<double> xThreshold( threshold.size() );
+        QVector<double> yThreshold( threshold.size() );
+        for ( int i = 0, p = 0 ; i < threshold.size() ; i ++ ) {
+            xThreshold[p] = i * ( 2048.0 / frequency );
+            yThreshold[p] = threshold.at( i );
+
+            p++;
+        }
+
+        thresholdGraph->setData( xThreshold, yThreshold );
+        thresholdGraph->setVisible( true );
+    } else {
+        thresholdGraph->setVisible( false );
+    }
 
     this->replot();
 }
@@ -469,13 +525,13 @@ void AudioPlot::paintEvent( QPaintEvent *event ) {
     QRectF coordsRect( this->width() - 200, 0, 200, 20 );
     painter.drawText( coordsRect, Qt::AlignRight, cursorCoordinates );
 
-    QRectF plotInfoRect( this->width() - 200, 20, 200, 20 );
-    painter.drawText( plotInfoRect, Qt::AlignRight, plotInfo );
+//    QRectF plotInfoRect( this->width() - 200, 20, 200, 20 );
+//    painter.drawText( plotInfoRect, Qt::AlignRight, plotInfo );
 
-    if ( showAverageVolume ) {
-        QRectF averageVolumeRect( this->width() - 200, 40, 200, 20 );
-        painter.drawText( averageVolumeRect, Qt::AlignRight, averageVolume );
-    }
+//    if ( showAverageVolume ) {
+//        QRectF averageVolumeRect( this->width() - 200, 40, 200, 20 );
+//        painter.drawText( averageVolumeRect, Qt::AlignRight, averageVolume );
+//    }
 
     if ( showPosition ) {
         painter.setPen( Qt::red );

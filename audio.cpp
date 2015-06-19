@@ -235,7 +235,7 @@ QVector<float> Audio::getFFTBlock( int index, int blockSize , bool raw ) {
     int fftSize = raw ? blockSize * 2 : blockSize / 2;
     int RAW_DATA = raw ? BASS_DATA_FFT_COMPLEX : 0;
     QVector<float> fft( fftSize );
-    BASS_ChannelGetData( sampleChannel, fft.data(), BASS_DATA_FLOAT | FFT_MODE | RAW_DATA );
+    BASS_ChannelGetData( sampleChannel, fft.data(), BASS_DATA_FLOAT | FFT_MODE | RAW_DATA | ONSET_WINDOW );
 
     BASS_SampleFree( sample );
 
@@ -254,21 +254,30 @@ QVector<float> Audio::getFFTBlock( int index, int blockSize , bool raw ) {
     return fft;
 }
 
-QVector<float> Audio::getOnset() const {
-    return onset;
+QVector<float> Audio::getSpectralFlux() const {
+    return spectralFlux;
 }
 
+QVector<float> Audio::getThreshold() const {
+    return threshold;
+}
+
+QVector<float> Audio::getPrunnedSpectralFlux() const {
+    return prunnedSpectralFlux;
+}
+
+QVector<float> Audio::getPeaks() const {
+    return peaks;
+}
 QVector<float> Audio::getPCM() const {
     return pcm;
 }
 
-void Audio::setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler , int processingSteps , bool window ) {
+void Audio::setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler, bool window ) {
     if ( onsetThresholdWindowSize < 1 ||
-            onsetMultipler < 1.0 || onsetMultipler > 2.0 ||
-            processingSteps < 1 || processingSteps > 5 ) {
+            onsetMultipler < 1.0 || onsetMultipler > 2.0 ) {
         return;
     }
-    ONSET_PROCESSING_STEPS = processingSteps;
     ONSET_THRESHOLD_WINDOW_SIZE = onsetThresholdWindowSize;
     ONSET_MULTIPLIER = onsetMultipler;
     ONSET_WINDOW = window ? 0 : BASS_DATA_FFT_NOWINDOW;
@@ -321,10 +330,7 @@ void Audio::fillOnset() {
         return;
     }
 
-    QVector<float> spectralFlux;
-    QVector<float> threshold;
-    QVector<float> prunnedSpectralFlux;
-    QVector<float> peaks;
+    spectralFlux.resize( 0 );
 
     long length = BASS_ChannelGetLength( decodeChannel, BASS_POS_BYTE );
     int channels = this->getAudioChannels();
@@ -375,10 +381,8 @@ void Audio::fillOnset() {
 
     BASS_StreamFree( decodeChannel );
 
-    if ( ONSET_PROCESSING_STEPS == 1 ) {
-        onset = spectralFlux;
-        return;
-    }
+
+    threshold.resize( 0 );
 
     for ( int i = 0; i < spectralFlux.length() ; i++ ) {
         int start = qMax( 0, i - ONSET_THRESHOLD_WINDOW_SIZE );
@@ -392,10 +396,8 @@ void Audio::fillOnset() {
         sampleProcessingDialog.addSampleProcessed();
     }
 
-    if ( ONSET_PROCESSING_STEPS == 2 ) {
-        onset = threshold;
-        return;
-    }
+
+    prunnedSpectralFlux.resize( 0 );
 
     for ( int i = 0; i < threshold.size(); i++ ) {
         if ( threshold.at( i ) <= spectralFlux.at( i ) ) {
@@ -406,10 +408,7 @@ void Audio::fillOnset() {
         sampleProcessingDialog.addSampleProcessed();
     }
 
-    if ( ONSET_PROCESSING_STEPS == 3 ) {
-        onset = prunnedSpectralFlux;
-        return;
-    }
+    peaks.resize( 0 );
 
     for ( int i = 0; i < prunnedSpectralFlux.size() - 1; i++ ) {
         if ( prunnedSpectralFlux.at( i ) > prunnedSpectralFlux.at( i + 1 ) ) {
@@ -418,11 +417,6 @@ void Audio::fillOnset() {
             peaks.append( 0.0 );
         }
         sampleProcessingDialog.addSampleProcessed();
-    }
-
-    if ( ONSET_PROCESSING_STEPS == 4 ) {
-        onset = peaks;
-        return;
     }
 
 //    int PEAK_CLEAN_WINDOW = 4;
@@ -441,37 +435,23 @@ void Audio::fillOnset() {
 //        sampleProcessingDialog.addSampleProcessed();
 //    }
 
-    int PEAK_CLEAN_WINDOW = 3;
-    for ( int i = 0 ; i < peaks.size() - PEAK_CLEAN_WINDOW ; i++ ) {
-        int peakCount = 0;
-        for ( int j = 0 ; j < PEAK_CLEAN_WINDOW ; j++ ) {
-            if ( peaks.at( i + j ) > 0.0 ) {
-                peakCount++;
-            }
-        }
-        if ( peakCount > 1 ) {
-            for ( int j = 1 ; j < peakCount ; j++ ) {
-                peaks[i + j] = 0.0;
-            }
-        }
-        sampleProcessingDialog.addSampleProcessed();
-    }
-
-    if ( ONSET_PROCESSING_STEPS == 5 ) {
-        onset = peaks;
-        return;
-    }
-
-    //peak heights
-//    if ( value > 0.01 ) {
-//        y[p] = 1.0;
-//    } else {
-//        y[p] = 0.0;
+//    int PEAK_CLEAN_WINDOW = 3;
+//    for ( int i = 0 ; i < peaks.size() - PEAK_CLEAN_WINDOW ; i++ ) {
+//        int peakCount = 0;
+//        for ( int j = 0 ; j < PEAK_CLEAN_WINDOW ; j++ ) {
+//            if ( peaks.at( i + j ) > 0.0 ) {
+//                peakCount++;
+//            }
+//        }
+//        if ( peakCount > 1 ) {
+//            for ( int j = 1 ; j < peakCount ; j++ ) {
+//                peaks[i + j] = 0.0;
+//            }
+//        }
+//        sampleProcessingDialog.addSampleProcessed();
 //    }
-    //
 
     sampleProcessingDialog.accept();
-
 }
 
 int Audio::checkError() {

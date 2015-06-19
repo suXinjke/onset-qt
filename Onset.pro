@@ -31,6 +31,7 @@ FORMS    += onset.ui \
     sampleprocessingdialog.ui
 
 LIBS     += -L$$PWD -lbass
+LIBS     += -LS$$PWD -lbass_fx
 
 RESOURCES += \
     res/resources.qrc

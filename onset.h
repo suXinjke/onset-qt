@@ -41,7 +41,7 @@ private:
     int                                 lastOnsetLowFreqFilter;
     int                                 lastOnsetHighFreqFilter;
     bool                                lastOnsetWindow;
-    VIEW_MODE                           lastViewMode;
+    int                                 lastOnsetViewMode;
 
     double                              audioDuration;
     void                                updateSeekSlider( double audioPosition );
@@ -62,8 +62,9 @@ private slots:
     void                                updateShowControls();
     void                                updateOnsetFilter();
     void                                showByRadioButton();
-    void                                showOnset();
-    void                                showWaveform();
+    void                                showByComboBox();
+    void                                showOnset( int processingSteps = 4 );
+    void                                showWaveform( bool applyWindow = false );
     void                                showStress();
     void                                showCurrentSampleBlock();
     void                                showFFT();

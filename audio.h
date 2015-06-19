@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QVector>
 #include "bass.h"
+#include "bass_fx.h"
 #include "qmath.h"
 #include "transform.h"
 #include "sampleprocessingdialog.h"
@@ -13,11 +14,6 @@ class Audio : public QObject {
     Q_OBJECT
 
 public:
-    enum AUDIO_TYPE {
-        AUDIO_FILE,
-        AUDIO_GENERATED
-    };
-
     explicit                            Audio( QObject *parent = 0 );
 
     bool                                loadAudio( const QString &audioFilePath );
@@ -30,17 +26,21 @@ public:
     double                              getAudioDuration();
     int                                 getAudioFrequency();
     int                                 getAudioChannels();
+    double                              getAudioBPM();
+
     int                                 getSampleCount();
     int                                 getSampleBlockCount( int sampleBlockSize = 1024 );
     QString                             getSampleBlockDuration( int index, int blockSize = 1024 );
 
     QVector<float>                      getSampleBlock( int index, int blockSize = 1024 );
     QVector<float>                      getFFTBlock( int index, int blockSize = 1024, bool raw = false );
-    QVector<float>                      getOnset() const;
+    QVector<float>                      getSpectralFlux() const;
+    QVector<float>                      getThreshold() const;
+    QVector<float>                      getPrunnedSpectralFlux() const;
+    QVector<float>                      getPeaks() const;
     QVector<float>                      getPCM() const;
-    void                                setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler, int processingSteps, bool window );
+    void                                setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler, bool window );
     bool                                setOnsetFilter( int lowFreq = 0, int highFreq = 0 );
-
 
 private:
     HSTREAM                             stream;
@@ -54,9 +54,13 @@ private:
     int                                 ONSET_FILTER_LOW;
     int                                 ONSET_FILTER_HIGH;
 
-    QVector<float>                      onset;
     QVector<float>                      pcm;
     QString                             audioFilePath;
+
+    QVector<float>                      spectralFlux;
+    QVector<float>                      threshold;
+    QVector<float>                      prunnedSpectralFlux;
+    QVector<float>                      peaks;
 
     void                                fillOnset();
     void                                fillPCM();

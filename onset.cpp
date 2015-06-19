@@ -10,7 +10,7 @@ Onset::Onset( QWidget *parent ) :
     lastOnsetLowFreqFilter( 0 ),
     lastOnsetHighFreqFilter( 0 ),
     lastOnsetWindow( true ),
-    lastViewMode( VIEW_MODE_ONSET ),
+    lastOnsetViewMode( 0 ),
     audioDuration( 0.0 ) {
 
     ui->setupUi( this );
@@ -34,8 +34,8 @@ Onset::Onset( QWidget *parent ) :
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
 
-    connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showOnset() ) );
-    connect( ui->waveformViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showWaveform() ) );
+    connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showByComboBox() ) );
+//    connect( ui->waveformViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showWaveform() ) );
     connect( ui->stressViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showStress() ) );
     connect( ui->sampleBlockViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showCurrentSampleBlock() ) );
     connect( ui->fftViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFT() ) );
@@ -43,11 +43,12 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->fftRawRealViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTRawReal() ) );
     connect( ui->fftRawImaginaryViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTRawImaginary() ) );
 
-    connect( ui->onsetProcessingStepsSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
+    connect( ui->onsetProcessingStepComboBox, SIGNAL( currentIndexChanged( int ) ), this, SLOT( showByComboBox() ) );
+
     connect( ui->onsetThresholdWindowSizeSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
     connect( ui->onsetMultiplierSpinBox, SIGNAL( valueChanged( double ) ), this, SLOT( showByRadioButton() ) );
-    connect( ui->onsetLowFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
-    connect( ui->onsetHighFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
+//    connect( ui->onsetLowFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
+//    connect( ui->onsetHighFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
     connect( ui->onsetWindowCheckbox, SIGNAL( toggled( bool ) ), this, SLOT( showByRadioButton() ) );
 
     connect( ui->waveformStepSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
@@ -92,15 +93,15 @@ void Onset::loadAudioFile( const QString &audioFilePath ) {
     int halfFrequency = audio->getAudioFrequency() / 2;
 
     ui->sampleBlockIndexSpinBox->setValue( 0 );
-    ui->onsetProcessingStepsSpinBox->setValue( 5 );
+//    ui->onsetProcessingStepsSpinBox->setValue( 5 );
     ui->onsetThresholdWindowSizeSpinBox->setValue( 20 );
     ui->onsetMultiplierSpinBox->setValue( 1.5 );
-    ui->onsetLowFreqFilterSpinBox->setMaximum( halfFrequency );
-    ui->onsetLowFreqFilterSpinBox->setValue( 0 );
-    ui->onsetHighFreqFilterSpinBox->setMaximum( halfFrequency );
-    ui->onsetHighFreqFilterSpinBox->setValue( 0 );
+//    ui->onsetLowFreqFilterSpinBox->setMaximum( halfFrequency );
+//    ui->onsetLowFreqFilterSpinBox->setValue( 0 );
+//    ui->onsetHighFreqFilterSpinBox->setMaximum( halfFrequency );
+//    ui->onsetHighFreqFilterSpinBox->setValue( 0 );
     ui->onsetWindowCheckbox->setChecked( true );
-    audio->setOnsetOptions( 20, 1.5, 5, true );
+    audio->setOnsetOptions( 20, 1.5, true );
     audio->setOnsetFilter( 0, 0 );
 
     this->updateShowControls();
@@ -159,20 +160,22 @@ void Onset::updateShowControls() {
 }
 
 void Onset::updateOnsetFilter() {
-    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
-    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
+//    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
+//    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
 
-    if ( audio->setOnsetFilter( onsetLowFreqFilter, onsetHighFreqFilter ) ) {
-        this->showByRadioButton();
-    }
+//    if ( audio->setOnsetFilter( onsetLowFreqFilter, onsetHighFreqFilter ) ) {
+//        this->showByRadioButton();
+//    }
 }
 
 void Onset::showByRadioButton() {
     if ( ui->onsetViewModeRadioButton->isChecked() ) {
-        this->showOnset();
-    } else if ( ui->waveformViewModeRadioButton->isChecked() ) {
-        this->showWaveform();
-    } else if ( ui->stressViewModeRadioButton->isChecked() ) {
+        this->showByComboBox();
+    }
+//    else if ( ui->waveformViewModeRadioButton->isChecked() ) {
+//        this->showWaveform();
+//    }
+    else if ( ui->stressViewModeRadioButton->isChecked() ) {
         this->showStress();
     } else if ( ui->sampleBlockViewModeRadioButton->isChecked() ) {
         this->showCurrentSampleBlock();
@@ -187,38 +190,70 @@ void Onset::showByRadioButton() {
     }
 }
 
-void Onset::showOnset() {
+void Onset::showByComboBox() {
+    int index = ui->onsetProcessingStepComboBox->currentIndex();
+    switch ( index ) {
+        case 0:
+            this->showWaveform();
+            break;
+        case 1:
+            this->showWaveform( true ); //windowed
+            break;
+        case 2:
+            this->showOnset( 1 );
+            break;
+        case 3:
+            this->showOnset( 2 );
+            break;
+        case 4:
+            this->showOnset( 3 );
+            break;
+        case 5:
+            this->showOnset( 4 );
+            break;
+
+        default:
+            break;
+    }
+}
+
+void Onset::showOnset( int processingSteps ) {
     if ( !ui->onsetViewModeRadioButton->isChecked() ) {
         return;
     }
 
-    int processingSteps = ui->onsetProcessingStepsSpinBox->value();
+//    int processingSteps = ui->onsetProcessingStepsSpinBox->value();
     int thresholdWindowSize = ui->onsetThresholdWindowSizeSpinBox->value();
-    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
-    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
+//    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
+//    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
     float onsetMultiplier = ui->onsetMultiplierSpinBox->value();
 
     bool onsetWindow = ui->onsetWindowCheckbox->isChecked();
-    if ( thresholdWindowSize != lastOnsetThresholdWindowSize || lastOnsetMultiplier != onsetMultiplier || processingSteps != lastOnsetProcessingSteps || onsetWindow != lastOnsetWindow || onsetLowFreqFilter != lastOnsetLowFreqFilter || onsetHighFreqFilter != lastOnsetHighFreqFilter  ) {
-        lastOnsetProcessingSteps = processingSteps;
+    if ( thresholdWindowSize != lastOnsetThresholdWindowSize || lastOnsetMultiplier != onsetMultiplier
+//         || processingSteps != lastOnsetProcessingSteps
+            || onsetWindow != lastOnsetWindow
+//         || onsetLowFreqFilter != lastOnsetLowFreqFilter || onsetHighFreqFilter != lastOnsetHighFreqFilter
+       ) {
+//        lastOnsetProcessingSteps = processingSteps;
         lastOnsetThresholdWindowSize = thresholdWindowSize;
         lastOnsetMultiplier = onsetMultiplier;
-        lastOnsetLowFreqFilter = onsetLowFreqFilter;
-        lastOnsetHighFreqFilter = onsetHighFreqFilter;
+//        lastOnsetLowFreqFilter = onsetLowFreqFilter;
+//        lastOnsetHighFreqFilter = onsetHighFreqFilter;
         lastOnsetWindow = onsetWindow;
-        audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, processingSteps, onsetWindow );
+
+        audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, onsetWindow );
     }
 
-    ui->audioPlot->loadOnset();
+    ui->audioPlot->loadOnset( processingSteps );
 }
 
-void Onset::showWaveform() {
-    if ( !ui->waveformViewModeRadioButton->isChecked() ) {
+void Onset::showWaveform( bool applyWindow ) {
+    if ( !ui->onsetViewModeRadioButton->isChecked() ) {
         return;
     }
 
     int step = ui->waveformStepSpinBox->value();
-    ui->audioPlot->loadWaveform( step );
+    ui->audioPlot->loadWaveform( step, applyWindow );
 }
 
 void Onset::showStress() {

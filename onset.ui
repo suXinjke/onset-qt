@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1036</width>
-    <height>675</height>
+    <height>686</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -99,7 +99,7 @@
       <item>
        <widget class="QGroupBox" name="viewModeGroupBox">
         <property name="title">
-         <string>Просмотр</string>
+         <string>View mode</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
@@ -113,9 +113,37 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="waveformViewModeRadioButton">
+          <widget class="QRadioButton" name="sampleBlockViewModeRadioButton">
            <property name="text">
-            <string>Waveform</string>
+            <string>Sample block</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftViewModeRadioButton">
+           <property name="text">
+            <string>FFT Polar - Magnitude</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftPhaseViewModeRadioButton">
+           <property name="text">
+            <string>FFT Polar - Phase</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftRawRealViewModeRadioButton">
+           <property name="text">
+            <string>FFT Rect - Real</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="fftRawImaginaryViewModeRadioButton">
+           <property name="text">
+            <string>FFT Rect - Imaginary</string>
            </property>
           </widget>
          </item>
@@ -127,38 +155,71 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="sampleBlockViewModeRadioButton">
-           <property name="text">
-            <string>Sample block</string>
+          <widget class="QSlider" name="tempoSlider">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimum">
+            <number>-95</number>
+           </property>
+           <property name="maximum">
+            <number>0</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
            </property>
           </widget>
          </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_4">
+        <property name="title">
+         <string>Onset processing steps</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
-          <widget class="QRadioButton" name="fftViewModeRadioButton">
-           <property name="text">
-            <string>FFT</string>
+          <widget class="QComboBox" name="onsetProcessingStepComboBox">
+           <property name="currentIndex">
+            <number>5</number>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="fftPhaseViewModeRadioButton">
-           <property name="text">
-            <string>FFT Phase</string>
+           <property name="maxVisibleItems">
+            <number>10</number>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="fftRawRealViewModeRadioButton">
-           <property name="text">
-            <string>FFT Raw - Real</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="fftRawImaginaryViewModeRadioButton">
-           <property name="text">
-            <string>FFT Raw - Imaginary</string>
-           </property>
+           <item>
+            <property name="text">
+             <string>1. Waveform</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2. WF Window</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>3. Spectral flux</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>4. Threshold</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>5. SF &lt; Threshold</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>6. Peaks</string>
+            </property>
+           </item>
           </widget>
          </item>
         </layout>
@@ -180,36 +241,13 @@
           <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
          </property>
          <item row="0" column="0">
-          <widget class="QLabel" name="label_3">
+          <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>Этапов обработки</string>
+            <string>Threshold window</string>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QSpinBox" name="onsetProcessingStepsSpinBox">
-           <property name="keyboardTracking">
-            <bool>false</bool>
-           </property>
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>5</number>
-           </property>
-           <property name="value">
-            <number>5</number>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Threshold window size</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
           <widget class="QSpinBox" name="onsetThresholdWindowSizeSpinBox">
            <property name="correctionMode">
             <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
@@ -228,14 +266,14 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item row="1" column="0">
           <widget class="QLabel" name="label_5">
            <property name="text">
-            <string>Multiplier</string>
+            <string>Threshold multiplier</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="1" column="1">
           <widget class="QDoubleSpinBox" name="onsetMultiplierSpinBox">
            <property name="correctionMode">
             <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
@@ -260,55 +298,10 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="0" colspan="2">
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Фильтр</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QSpinBox" name="onsetLowFreqFilterSpinBox">
-           <property name="minimumSize">
-            <size>
-             <width>59</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="keyboardTracking">
-            <bool>false</bool>
-           </property>
-           <property name="maximum">
-            <number>0</number>
-           </property>
-           <property name="value">
-            <number>0</number>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QSpinBox" name="onsetHighFreqFilterSpinBox">
-           <property name="minimumSize">
-            <size>
-             <width>59</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="keyboardTracking">
-            <bool>false</bool>
-           </property>
-           <property name="maximum">
-            <number>0</number>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0" colspan="2">
+         <item row="2" column="0" colspan="2">
           <widget class="QCheckBox" name="onsetWindowCheckbox">
            <property name="text">
-            <string>Окно</string>
+            <string>Hamming window</string>
            </property>
            <property name="checked">
             <bool>true</bool>
@@ -352,7 +345,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label_6">
            <property name="text">
-            <string>Шаг</string>
+            <string>Step</string>
            </property>
           </widget>
          </item>
@@ -391,7 +384,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label">
            <property name="text">
-            <string>Размер блока</string>
+            <string>Block size</string>
            </property>
           </widget>
          </item>
@@ -455,7 +448,7 @@
          <item row="1" column="0">
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>Блок</string>
+            <string>Block index</string>
            </property>
           </widget>
          </item>

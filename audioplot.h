@@ -12,13 +12,13 @@ public:
 
     void                                setAudio( Audio *audio );
     void                                loadPCMData( const QVector<float> &pcm );
-    void                                loadWaveform( int step = 4410 );
+    void                                loadWaveform( int step = 4410, bool applyWindow = false );
     void                                loadStress( int window = 1024, int step = 4410 );
     void                                loadPCMBlock( int index, int blockSize = 1024 );
     void                                loadFFTBlock( int index, int blockSize = 1024 );
     void                                loadFFTPhaseBlock( int index, int blockSize = 1024 );
     void                                loadFFTBlockRaw( int index, int blockSize = 1024, bool imaginary = false );
-    void                                loadOnset();
+    void                                loadOnset( int processingSteps = 5 );
     void                                setPositionInSeconds( double seconds );
     QString                             getFundamentalFrequency() const;
     QString                             getAverageVolume( double seconds ) ;
@@ -36,7 +36,7 @@ public slots:
 private:
     Audio                               *audio;
     QCPGraph                            *pcmGraph;
-    QCPGraph                            *waveformGraph;
+    QCPGraph                            *thresholdGraph;
 
     QVector<double>                     x;
     QVector<double>                     y;
