@@ -4,13 +4,9 @@
 Onset::Onset( QWidget *parent ) :
     QMainWindow( parent ),
     ui( new Ui::Onset ),
-    lastOnsetProcessingSteps( 5 ),
     lastOnsetThresholdWindowSize( 20 ),
     lastOnsetMultiplier( 1.5f ),
-    lastOnsetLowFreqFilter( 0 ),
-    lastOnsetHighFreqFilter( 0 ),
     lastOnsetWindow( true ),
-    lastOnsetViewMode( 0 ),
     audioDuration( 0.0 ) {
 
     ui->setupUi( this );
@@ -34,33 +30,15 @@ Onset::Onset( QWidget *parent ) :
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
 
-    connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showByComboBox() ) );
-//    connect( ui->waveformViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showWaveform() ) );
+    connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showOnset() ) );
     connect( ui->stressViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showStress() ) );
-    connect( ui->sampleBlockViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showCurrentSampleBlock() ) );
-    connect( ui->fftViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFT() ) );
-    connect( ui->fftPhaseViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTPhase() ) );
-    connect( ui->fftRawRealViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTRawReal() ) );
-    connect( ui->fftRawImaginaryViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showFFTRawImaginary() ) );
-
-    connect( ui->onsetProcessingStepComboBox, SIGNAL( currentIndexChanged( int ) ), this, SLOT( showByComboBox() ) );
 
     connect( ui->onsetThresholdWindowSizeSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
     connect( ui->onsetMultiplierSpinBox, SIGNAL( valueChanged( double ) ), this, SLOT( showByRadioButton() ) );
-//    connect( ui->onsetLowFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
-//    connect( ui->onsetHighFreqFilterSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateOnsetFilter() ) );
     connect( ui->onsetWindowCheckbox, SIGNAL( toggled( bool ) ), this, SLOT( showByRadioButton() ) );
 
     connect( ui->waveformStepSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
     connect( ui->stressWindowSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
-
-    connect( ui->sampleBlockSizeComboBox, SIGNAL( currentIndexChanged( int ) ), this, SLOT( showByRadioButton() ) );
-    connect( ui->sampleBlockIndexSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
-
-//    QVector<float> pcm;
-//    pcm << 1.0 << 1.0 << 1.0 << 1.0 << 0.0 << 0.0 << 0.0 << 0.0;
-
-//    ui->audioPlot->loadPCMData( Transform::FFT( pcm ) );
 }
 
 Onset::~Onset() {
@@ -90,21 +68,12 @@ void Onset::loadAudioFile( const QString &audioFilePath ) {
     ui->audioSeekSlider->setMaximum( audioDuration );
     this->updateSeekInfo();
 
-    int halfFrequency = audio->getAudioFrequency() / 2;
-
-    ui->sampleBlockIndexSpinBox->setValue( 0 );
-//    ui->onsetProcessingStepsSpinBox->setValue( 5 );
     ui->onsetThresholdWindowSizeSpinBox->setValue( 20 );
     ui->onsetMultiplierSpinBox->setValue( 1.5 );
-//    ui->onsetLowFreqFilterSpinBox->setMaximum( halfFrequency );
-//    ui->onsetLowFreqFilterSpinBox->setValue( 0 );
-//    ui->onsetHighFreqFilterSpinBox->setMaximum( halfFrequency );
-//    ui->onsetHighFreqFilterSpinBox->setValue( 0 );
     ui->onsetWindowCheckbox->setChecked( true );
     audio->setOnsetOptions( 20, 1.5, true );
     audio->setOnsetFilter( 0, 0 );
 
-    this->updateShowControls();
     this->showByRadioButton();
     this->play();
 }
@@ -147,113 +116,33 @@ void Onset::updateSeekInfo() {
     ui->audioPlot->setPositionInSeconds( audioPosition );
 }
 
-void Onset::updateShowControls() {
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-    int blockCount = audio->getSampleBlockCount( blockSize );
-
-    QString blockDuration = audio->getSampleBlockDuration( blockIndex, blockSize );
-
-    ui->currentSampleBlockLabel->setText( QString( "%1 / %2" ).arg( blockIndex ).arg( blockCount - 1 ) );
-    ui->currentSampleBlockDurationLabel->setText( blockDuration );
-    ui->sampleBlockIndexSpinBox->setMaximum( blockCount - 1 );
-}
-
-void Onset::updateOnsetFilter() {
-//    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
-//    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
-
-//    if ( audio->setOnsetFilter( onsetLowFreqFilter, onsetHighFreqFilter ) ) {
-//        this->showByRadioButton();
-//    }
-}
-
 void Onset::showByRadioButton() {
     if ( ui->onsetViewModeRadioButton->isChecked() ) {
-        this->showByComboBox();
-    }
-//    else if ( ui->waveformViewModeRadioButton->isChecked() ) {
-//        this->showWaveform();
-//    }
-    else if ( ui->stressViewModeRadioButton->isChecked() ) {
+        this->showOnset();
+    } else if ( ui->stressViewModeRadioButton->isChecked() ) {
         this->showStress();
-    } else if ( ui->sampleBlockViewModeRadioButton->isChecked() ) {
-        this->showCurrentSampleBlock();
-    } else if ( ui->fftViewModeRadioButton->isChecked() ) {
-        this->showFFT();
-    } else if ( ui->fftPhaseViewModeRadioButton->isChecked() ) {
-        this->showFFTPhase();
-    } else if ( ui->fftRawRealViewModeRadioButton->isChecked() ) {
-        this->showFFTRawReal();
-    } else if ( ui->fftRawImaginaryViewModeRadioButton->isChecked() ) {
-        this->showFFTRawImaginary();
     }
 }
 
-void Onset::showByComboBox() {
-    int index = ui->onsetProcessingStepComboBox->currentIndex();
-    switch ( index ) {
-        case 0:
-            this->showWaveform();
-            break;
-        case 1:
-            this->showWaveform( true ); //windowed
-            break;
-        case 2:
-            this->showOnset( 1 );
-            break;
-        case 3:
-            this->showOnset( 2 );
-            break;
-        case 4:
-            this->showOnset( 3 );
-            break;
-        case 5:
-            this->showOnset( 4 );
-            break;
-
-        default:
-            break;
-    }
-}
-
-void Onset::showOnset( int processingSteps ) {
+void Onset::showOnset() {
     if ( !ui->onsetViewModeRadioButton->isChecked() ) {
         return;
     }
 
-//    int processingSteps = ui->onsetProcessingStepsSpinBox->value();
     int thresholdWindowSize = ui->onsetThresholdWindowSizeSpinBox->value();
-//    int onsetLowFreqFilter = ui->onsetLowFreqFilterSpinBox->value();
-//    int onsetHighFreqFilter = ui->onsetHighFreqFilterSpinBox->value();
     float onsetMultiplier = ui->onsetMultiplierSpinBox->value();
 
     bool onsetWindow = ui->onsetWindowCheckbox->isChecked();
     if ( thresholdWindowSize != lastOnsetThresholdWindowSize || lastOnsetMultiplier != onsetMultiplier
-//         || processingSteps != lastOnsetProcessingSteps
-            || onsetWindow != lastOnsetWindow
-//         || onsetLowFreqFilter != lastOnsetLowFreqFilter || onsetHighFreqFilter != lastOnsetHighFreqFilter
-       ) {
-//        lastOnsetProcessingSteps = processingSteps;
+            || onsetWindow != lastOnsetWindow ) {
         lastOnsetThresholdWindowSize = thresholdWindowSize;
         lastOnsetMultiplier = onsetMultiplier;
-//        lastOnsetLowFreqFilter = onsetLowFreqFilter;
-//        lastOnsetHighFreqFilter = onsetHighFreqFilter;
         lastOnsetWindow = onsetWindow;
 
         audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, onsetWindow );
     }
 
-    ui->audioPlot->loadOnset( processingSteps );
-}
-
-void Onset::showWaveform( bool applyWindow ) {
-    if ( !ui->onsetViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int step = ui->waveformStepSpinBox->value();
-    ui->audioPlot->loadWaveform( step, applyWindow );
+    ui->audioPlot->loadOnset();
 }
 
 void Onset::showStress() {
@@ -264,67 +153,6 @@ void Onset::showStress() {
     int step = ui->waveformStepSpinBox->value();
     int stressWindow = ui->stressWindowSpinBox->value();
     ui->audioPlot->loadStress( stressWindow, step );
-}
-
-void Onset::showCurrentSampleBlock() {
-    if ( !ui->sampleBlockViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-
-    this->updateShowControls();
-    ui->audioPlot->loadPCMBlock( blockIndex, blockSize );
-
-}
-
-void Onset::showFFT() {
-    if ( !ui->fftViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-
-    this->updateShowControls();
-    ui->audioPlot->loadFFTBlock( blockIndex, blockSize );
-}
-
-void Onset::showFFTPhase() {
-    if ( !ui->fftPhaseViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-
-    this->updateShowControls();
-    ui->audioPlot->loadFFTPhaseBlock( blockIndex, blockSize );
-}
-
-void Onset::showFFTRawReal() {
-    if ( !ui->fftRawRealViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-
-    this->updateShowControls();
-    ui->audioPlot->loadFFTBlockRaw( blockIndex, blockSize, false );
-}
-
-void Onset::showFFTRawImaginary() {
-    if ( !ui->fftRawImaginaryViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int blockSize = ui->sampleBlockSizeComboBox->currentText().toInt();
-    int blockIndex = ui->sampleBlockIndexSpinBox->value();
-
-    this->updateShowControls();
-    ui->audioPlot->loadFFTBlockRaw( blockIndex, blockSize, true );
 }
 
 void Onset::updateSeekSlider( double audioPosition ) {

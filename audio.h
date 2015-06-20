@@ -42,6 +42,8 @@ public:
     void                                setOnsetOptions( int onsetThresholdWindowSize, float onsetMultipler, bool window );
     bool                                setOnsetFilter( int lowFreq = 0, int highFreq = 0 );
 
+    void                                fillPCM( int pcmStep = 512 );
+
 private:
     HSTREAM                             stream;
     BASS_CHANNELINFO                    channelInfo;
@@ -54,6 +56,8 @@ private:
     int                                 ONSET_FILTER_LOW;
     int                                 ONSET_FILTER_HIGH;
 
+    int                                 pcmStep;
+
     QVector<float>                      pcm;
     QString                             audioFilePath;
 
@@ -63,7 +67,6 @@ private:
     QVector<float>                      peaks;
 
     void                                fillOnset();
-    void                                fillPCM();
     int                                 checkError();
 };
 

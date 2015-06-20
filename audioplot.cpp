@@ -10,7 +10,6 @@ AudioPlot::AudioPlot( QWidget *parent ) :
     tickTimer( 0 ) {
 
     pcmGraph = this->addGraph();
-    thresholdGraph = this->addGraph();
     this->xAxis->setRange( 0, 1 );
     this->yAxis->setRange( 0, 1 );
     this->setInteraction( QCP::iRangeDrag, true );
@@ -22,13 +21,6 @@ AudioPlot::AudioPlot( QWidget *parent ) :
 
     pcmGraph->setScatterStyle( QCPScatterStyle::ssDisc );
     pcmGraph->setLineStyle( QCPGraph::lsImpulse );
-//    thresholdGraph->setScatterStyle( QCPScatterStyle::ssDisc );
-//    thresholdGraph->setLineStyle( QCPGraph::lsImpulse );
-    thresholdGraph->setPen( QPen( Qt::darkYellow ) );
-    QColor transparentYellow( Qt::yellow );
-    transparentYellow.setAlpha( 200 );
-    QBrush goldBrush( transparentYellow );
-    thresholdGraph->setBrush( goldBrush );
 
     connect( this, SIGNAL( mousePress( QMouseEvent * ) ), this, SLOT( onRightClick( QMouseEvent * ) ) );
     connect( this, SIGNAL( mouseMove( QMouseEvent * ) ), this, SLOT( getCursorCoordinates( QMouseEvent * ) ) );
@@ -38,111 +30,8 @@ void AudioPlot::setAudio( Audio *audio ) {
     this->audio = audio;
 }
 
-void AudioPlot::loadPCMData( const QVector<float> &pcm ) {
-    int N = pcm.length();
-    if ( N <= 0 ) {
-        return;
-    }
-
-    x.resize( N );
-    y.resize( N );
-    for ( int i = 0; i < N ; i ++ ) {
-        x[i] = i;
-        y[i] = pcm.at( i );
-    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-
-    showPosition = false;
-    showAverageVolume = false;
-    meanAll = 0.0;
-
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
-void AudioPlot::loadWaveform( int step , bool applyWindow ) {
-//    QVector<float> pcmDef = audio->getPCM();
-//    int N = pcmDef.length();
-//    if ( N <= 0 ) {
-//        return;
-//    }
-
-    QVector<float> pcm = audio->getPCM();
-    int N = pcm.length();
-    if ( N <= 0 ) {
-        return;
-    }
-
-    if ( applyWindow ) {
-        for ( int i = 0; i < N; i += 1024 ) {
-            int begin = i;
-            int end = qMin( i + 1024, N - 1 );
-            for ( int j = begin ; j < end ; j++ ) {
-                pcm[j] *= ( 0.54f - 0.46f * qCos( 2 * M_PI * j / ( ( end - begin ) - 1 ) ) );
-            }
-        }
-    }
-
-
-//    QVector<float> pcm2;
-//    for ( int i = 0; i < N ; i += step ) {
-//        int start = qMax( 0, i - 2048 );
-//        int end = qMin( N - 1, i + 2048 );
-//        float mean = 0.0f;
-//        for ( int j = start ; j <= end ; j ++ ) {
-//            mean += qAbs( pcmDef.at( j ) );
-//        }
-//        mean /= ( end - start );
-//        pcm2.append( mean );
-//    }
-//    N = pcm2.length();
-//    QVector<float> pcm;
-//    for ( int i = 0; i < N ; i ++ ) {
-//        int start = qMax( 0, i - 1024 );
-//        int end = qMin( N - 1, i + 1024 );
-//        float mean = 0.0f;
-//        for ( int j = start ; j <= end ; j ++ ) {
-//            mean += qAbs( pcm2.at( j ) );
-//        }
-//        mean /= ( end - start );
-//        pcm.append( mean );
-//    }
-
-
-    int frequency = audio->getAudioFrequency();
-    int channels = audio->getAudioChannels();
-
-    x.resize( qCeil( ( double ) N / step ) );
-    y.resize( qCeil( ( double ) N / step ) );
-    for ( int i = 0, p = 0 ; i < N ; i += step ) {
-        x[p] = ( double ) i / frequency / channels;
-        double value = pcm.at( i );
-        y[p] = value;
-        p++;
-    }
-
-//    N = pcm.length();
-//    x.resize( N );
-//    y.resize( N );
-//    for ( int i = 0; i < N ; i ++ ) {
-//        x[i] = ( double ) ( i * step ) / frequency / channels;
-//        y[i] = pcm.at( i );
-//    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-    showPosition = true;
-    showAverageVolume = true;
-    meanAll = 0.0;
-
-    plotInfo = "";
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
 void AudioPlot::loadStress( int window, int step ) {
+    audio->fillPCM( step );
     QVector<float> pcm = audio->getPCM();
     int N = pcm.length();
     if ( N <= 0 ) {
@@ -152,12 +41,15 @@ void AudioPlot::loadStress( int window, int step ) {
     int frequency = audio->getAudioFrequency();
     int channels = audio->getAudioChannels();
 
-    QVector<float> pcmShortened;
-    for ( int i = 0; i < N ; i += step ) {
-        pcmShortened.append( pcm.at( i ) );
-    }
+//    QVector<float> pcmShortened;
+//    for ( int i = 0; i < N ; i += step ) {
+//        pcmShortened.append( pcm.at( i ) );
+//    }
 
-    N = pcmShortened.length();
+//    N = pcmShortened.length();
+
+    QElapsedTimer timer;
+    timer.start();
 
     QVector<float> pcmFiltered;
     for ( int i = 0; i < N ; i ++ ) {
@@ -165,12 +57,14 @@ void AudioPlot::loadStress( int window, int step ) {
         int end = qMin( N - 1, i + window );
         double mean = 0;
         for ( int j = start ; j <= end ; j++ ) {
-            mean += pcmShortened.at( j ) * pcmShortened.at( j );
+            mean += pcm.at( j ) * pcm.at( j );
         }
         mean /= ( end - start );
         mean = qSqrt( mean );
         pcmFiltered.append( mean );
     }
+
+
 
 
     N = pcmFiltered.length();
@@ -197,151 +91,12 @@ void AudioPlot::loadStress( int window, int step ) {
     showAverageVolume = false;
 
     plotInfo = "";
-    thresholdGraph->setVisible( false );
     this->replot();
 }
 
-void AudioPlot::loadPCMBlock( int index, int blockSize ) {
-    QVector<float> pcm = audio->getSampleBlock( index, blockSize );
-    int N = pcm.length();
-    if ( N <= 0 ) {
-        return;
-    }
+void AudioPlot::loadOnset() {
+    QVector<float> pcm = audio->getPeaks();
 
-    x.resize( N );
-    y.resize( N );
-    for ( int i = 0, p = 0 ; i < N ; i ++ ) {
-        x[p] = i / 2.0; //2 because of float double memory usage
-        y[p] = pcm.at( i );
-        p++;
-    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-    showPosition = false;
-    showAverageVolume = false;
-    meanAll = 0.0;
-
-    plotInfo = "";
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
-void AudioPlot::loadFFTBlock( int index, int blockSize ) {
-    QVector<float> fft = audio->getFFTBlock( index, blockSize );
-    int N = fft.length();
-    if ( N <= 0 ) {
-        return;
-    }
-
-    int halfFrequency = audio->getAudioFrequency() / 2;
-
-    x.resize( N );
-    y.resize( N );
-    for ( int i = 0, p = 0 ; i < N ; i ++ ) {
-        x[p] = ( ( double ) i / N ) * halfFrequency;
-
-//        double value = fft.at( i );
-//        if ( value <= 0.0 ) {
-//            y[p] = 0.0;
-//        } else {
-//            y[p] = 10 * std::log10( -value );
-//        }
-        y[p] = fft.at( i );
-
-        p++;
-    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-    showPosition = false;
-    showAverageVolume = false;
-    meanAll = 0.0;
-
-    plotInfo = this->getFundamentalFrequency();
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
-void AudioPlot::loadFFTPhaseBlock( int index, int blockSize ) {
-    QVector<float> fft = audio->getFFTBlock( index, blockSize, true );
-    int N = fft.length();
-    if ( N <= 0 ) {
-        return;
-    }
-
-    int halfFrequency = audio->getAudioFrequency() / 2;
-
-    x.resize( N / 4 );
-    y.resize( N / 4 );
-    for ( int i = 1, p = 0 ; p < N / 4 ; i += 2 ) {
-        double real = fft.at( i - 1 );
-        double imaginary = fft.at( i );
-        x[p] = ( ( double ) p / ( N / 4 ) ) * halfFrequency;
-        if ( qAbs( real ) < 0.01 ) {
-            y[p] = 0.0;
-        } else {
-            y[p] = qAtan( imaginary / real );
-        }
-        p++;
-    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-    showPosition = false;
-    showAverageVolume = false;
-    meanAll = 0.0;
-
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
-void AudioPlot::loadFFTBlockRaw( int index, int blockSize, bool imaginary ) {
-    QVector<float> fft = audio->getFFTBlock( index, blockSize, true );
-    int N = fft.length();
-    if ( N <= 0 ) {
-        return;
-    }
-
-//    int halfFrequency = audio->getAudioFrequency() / 2;
-
-    qDebug() << fft.length();
-
-    x.resize( N / 4 );
-    y.resize( N / 4 );
-    for ( int i = imaginary, p = 0 ; p < N / 4 ; i += 2 ) {
-//        x[p] = ( ( double ) i / N ) * halfFrequency;
-        x[p] = p;
-        y[p] = fft.at( i );
-        p++;
-    }
-
-    pcmGraph->clearData();
-    pcmGraph->setData( x, y );
-    showPosition = false;
-    showAverageVolume = false;
-    meanAll = 0.0;
-
-    thresholdGraph->setVisible( false );
-    this->replot();
-}
-
-void AudioPlot::loadOnset( int processingSteps ) {
-    QVector<float> pcm;
-    switch ( processingSteps ) {
-        case 1:
-        case 2:
-            pcm = audio->getSpectralFlux();
-            break;
-        case 3:
-            pcm = audio->getPrunnedSpectralFlux();
-            break;
-        case 4:
-            pcm = audio->getPeaks();
-            break;
-        default:
-            break;
-    }
     int N = pcm.length();
     if ( N <= 0 ) {
         return;
@@ -366,24 +121,6 @@ void AudioPlot::loadOnset( int processingSteps ) {
 
     plotInfo = "";
 
-
-    if ( processingSteps == 2 ) {
-        QVector<float> threshold = audio->getThreshold();
-        QVector<double> xThreshold( threshold.size() );
-        QVector<double> yThreshold( threshold.size() );
-        for ( int i = 0, p = 0 ; i < threshold.size() ; i ++ ) {
-            xThreshold[p] = i * ( 2048.0 / frequency );
-            yThreshold[p] = threshold.at( i );
-
-            p++;
-        }
-
-        thresholdGraph->setData( xThreshold, yThreshold );
-        thresholdGraph->setVisible( true );
-    } else {
-        thresholdGraph->setVisible( false );
-    }
-
     this->replot();
 }
 
@@ -401,28 +138,6 @@ void AudioPlot::setPositionInSeconds( double seconds ) {
     }
 
     this->update();
-}
-
-QString AudioPlot::getFundamentalFrequency() const {
-    int N = x.length();
-    if ( N <= 0 ) {
-        return QString();
-    }
-
-    double max = x.at( 0 );
-    double fundamentalFrequency = 0.0;
-
-    for ( int i = 1 ; i < N ; i++ ) {
-        double xValue = x.at( i );
-        double yValue = y.at( i );
-
-        if ( yValue - 0.01 > max ) {
-            max = yValue;
-            fundamentalFrequency = xValue;
-        }
-    }
-
-    return QString( "Fundamenutal frequency: %1" ).arg( fundamentalFrequency );
 }
 
 QString AudioPlot::getAverageVolume( double seconds ) {

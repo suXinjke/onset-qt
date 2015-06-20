@@ -38,10 +38,7 @@ private:
     int                                 lastOnsetProcessingSteps;
     int                                 lastOnsetThresholdWindowSize;
     float                               lastOnsetMultiplier;
-    int                                 lastOnsetLowFreqFilter;
-    int                                 lastOnsetHighFreqFilter;
     bool                                lastOnsetWindow;
-    int                                 lastOnsetViewMode;
 
     double                              audioDuration;
     void                                updateSeekSlider( double audioPosition );
@@ -59,22 +56,9 @@ private slots:
     void                                updateSeekInfo();
 
     //plot
-    void                                updateShowControls();
-    void                                updateOnsetFilter();
     void                                showByRadioButton();
-    void                                showByComboBox();
-    void                                showOnset( int processingSteps = 4 );
-    void                                showWaveform( bool applyWindow = false );
+    void                                showOnset();
     void                                showStress();
-    void                                showCurrentSampleBlock();
-    void                                showFFT();
-    void                                showFFTPhase();
-    void                                showFFTRawReal();
-    void                                showFFTRawImaginary();
-
-
-
-
 };
 
 #endif // ONSET_H

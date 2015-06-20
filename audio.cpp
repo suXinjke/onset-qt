@@ -29,7 +29,7 @@ bool Audio::loadAudio( const QString &audioFilePath ) {
     BASS_ChannelGetInfo( stream, &channelInfo );
     this->audioFilePath = audioFilePath;
 
-    this->fillPCM();
+//    this->fillPCM();
     return true;
 }
 
@@ -296,29 +296,37 @@ bool Audio::setOnsetFilter( int lowFreq, int highFreq ) {
     return true;
 }
 
-void Audio::fillPCM() {
+void Audio::fillPCM( int pcmStep ) {
     if ( !stream ) {
         return;
     }
 
-    HSAMPLE sample = BASS_SampleLoad( false, audioFilePath.toStdString().c_str(), 0, 0, 1, BASS_SAMPLE_FLOAT );
-    this->checkError();
-    BASS_SAMPLE sampleInfo;
-    if ( !BASS_SampleGetInfo( sample, &sampleInfo ) ) {
+    HSTREAM decodeChannel = BASS_StreamCreateFile( false, audioFilePath.toStdString().c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_STREAM_DECODE );
+
+    if ( !decodeChannel ) {
         this->checkError();
         return;
     }
 
-    //freq * seconds * sampleSize * chans = length (bytes)
+    pcm.resize( 0 );
 
-    pcm.resize( sampleInfo.length / sizeof( float ) );
-    if ( !BASS_SampleGetData( sample, pcm.data() ) ) {
-        this->checkError();
+    long length = BASS_ChannelGetLength( decodeChannel, BASS_POS_BYTE );
+    int channels = this->getAudioChannels();
+    long step = 1024 * sizeof( float ) * channels;
+
+    for ( long i = 0 ; i < length; i += step ) {
+        float piece[2048];
+
+        BASS_ChannelSetPosition( decodeChannel, i, BASS_POS_BYTE | BASS_POS_DECODETO );
+        BASS_ChannelGetData( decodeChannel, piece, step );
+
+        for ( int j = 0 ; j < 2048 ; j += pcmStep ) {
+            pcm.append( piece[j] );
+        }
     }
 
-    if ( !BASS_SampleFree( sample ) ) {
-        this->checkError();
-    }
+
+    BASS_StreamFree( decodeChannel );
 }
 
 void Audio::fillOnset() {
@@ -376,8 +384,6 @@ void Audio::fillOnset() {
         sampleProcessingDialog.addSampleProcessed();
 
     }
-
-
 
     BASS_StreamFree( decodeChannel );
 
