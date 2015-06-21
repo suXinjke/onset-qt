@@ -27,6 +27,7 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->resetRangeAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRange() ) );
     connect( ui->resetRangeXAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRangeX() ) );
     connect( ui->resetRangeYAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRangeY() ) );
+    connect( ui->produceAudioInfoFileAction, SIGNAL( triggered() ), this, SLOT( produceAudioInfoFile() ) );
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
 
@@ -46,7 +47,7 @@ Onset::~Onset() {
 }
 
 void Onset::loadAudioFile() {
-    QString audioFilePath = QFileDialog::getOpenFileName( this, "Загрузить аудио", QString(), tr( "Аудио файлы (*.mp3 *.wav )" ) );
+    audioFilePath = QFileDialog::getOpenFileName( this, "Загрузить аудио", QString(), tr( "Аудио файлы (*.mp3 *.wav )" ) );
     this->loadAudioFile( audioFilePath );
 }
 
@@ -142,6 +143,8 @@ void Onset::showOnset() {
         audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, onsetWindow );
     }
 
+    audio->fillPCM( ui->waveformStepSpinBox->value() );
+
     ui->audioPlot->loadOnset();
 }
 
@@ -170,4 +173,34 @@ void Onset::updateSeekLabel( double audioPosition ) {
                             .arg( durationTime.toString( "mm:ss" ) );
 
     ui->audioSeekLabel->setText( seekLabelText );
+}
+
+void Onset::produceAudioInfoFile() {
+    QFile file( audioFilePath );
+    file.open( QIODevice::ReadOnly );
+    QString sha1 = QCryptographicHash::hash( file.readAll(), QCryptographicHash::Sha1 ).toHex();
+    file.close();
+
+    QFile outFile( QString( "D:\\%1" ).arg( sha1 ) );
+    if ( outFile.open( QIODevice::WriteOnly ) ) {
+        QVector<float> peaks = audio->getPeaks();
+        int N = peaks.length();
+        if ( N <= 0 ) {
+            return;
+        }
+        int frequency = audio->getAudioFrequency();
+        QTextStream out( &outFile );
+
+        for ( int i = 0 ; i < N ; i ++ ) {
+            if ( peaks.at( i ) > 0.0 ) {
+                double positionSeconds = i * ( 2048.0 / frequency );
+                out << positionSeconds << ", " << audio->getLevelAtPosition( positionSeconds ) << endl;
+            }
+        }
+
+        outFile.close();
+    }
+
+
+
 }

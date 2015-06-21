@@ -311,6 +311,7 @@
    <addaction name="resetRangeXAction"/>
    <addaction name="resetRangeYAction"/>
    <addaction name="separator"/>
+   <addaction name="produceAudioInfoFileAction"/>
   </widget>
   <action name="loadAudioFileAction">
    <property name="icon">
@@ -346,6 +347,18 @@
    </property>
    <property name="text">
     <string>Reset Range Y</string>
+   </property>
+  </action>
+  <action name="produceAudioInfoFileAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/brick.png</normaloff>:/brick.png</iconset>
+   </property>
+   <property name="text">
+    <string>produceAudioInfoFile</string>
+   </property>
+   <property name="toolTip">
+    <string>Make Audio info file</string>
    </property>
   </action>
  </widget>

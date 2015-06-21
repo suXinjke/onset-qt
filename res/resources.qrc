@@ -9,5 +9,6 @@
         <file>autozoom.png</file>
         <file>autozoomX.png</file>
         <file>autozoomY.png</file>
+        <file>brick.png</file>
     </qresource>
 </RCC>

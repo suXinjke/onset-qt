@@ -142,6 +142,18 @@ int Audio::getAudioChannels() {
     return channelInfo.chans;
 }
 
+double Audio::getLevelAtPosition( double positionSeconds , int pcmStep ) {
+    if ( !stream ) {
+        return -1.0;
+    }
+
+    int channels = this->getAudioChannels();
+    int frequency = this->getAudioFrequency();
+
+    int index = ( positionSeconds * frequency * channels ) / pcmStep;
+    return qAbs( pcm.at( index ) );
+}
+
 int Audio::getSampleCount() {
     if ( !stream ) {
         return -1;

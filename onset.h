@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QTime>
 #include <QDebug>
+#include <QCryptographicHash>
 #include "audio.h"
 #include "audioplot.h"
 #include "transform.h"
@@ -33,6 +34,7 @@ private:
     Ui::Onset                           *ui;
 
     Audio                               *audio;
+    QString                             audioFilePath;
     QTimer                              *seekTimer;
 
     int                                 lastOnsetProcessingSteps;
@@ -59,6 +61,8 @@ private slots:
     void                                showByRadioButton();
     void                                showOnset();
     void                                showStress();
+
+    void                                produceAudioInfoFile();
 };
 
 #endif // ONSET_H

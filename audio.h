@@ -27,6 +27,7 @@ public:
     int                                 getAudioFrequency();
     int                                 getAudioChannels();
     double                              getAudioBPM();
+    double                              getLevelAtPosition( double positionSeconds, int pcmStep = 512 );
 
     int                                 getSampleCount();
     int                                 getSampleBlockCount( int sampleBlockSize = 1024 );

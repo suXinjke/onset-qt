@@ -108,7 +108,12 @@ void AudioPlot::loadOnset() {
     y.resize( N );
     for ( int i = 0, p = 0 ; i < N ; i ++ ) {
         x[p] = i * ( 2048.0 / frequency );
-        y[p] = pcm.at( i );
+//        y[p] = pcm.at( i );
+        if ( pcm.at( i ) > 0.0 ) {
+            y[p] = audio->getLevelAtPosition( i * ( 2048.0 / frequency ) );
+        } else {
+            y[p] = 0.0;
+        }
 
         p++;
     }
