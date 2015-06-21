@@ -8,12 +8,17 @@ class AudioPlot : public QCustomPlot {
     Q_OBJECT
 public:
 
+    enum                                VIEW_MODE {
+        VIEW_MODE_ONSET,
+        VIEW_MODE_STRESS,
+        VIEW_MODE_STRESS_FORMATTED
+    };
+
     explicit                            AudioPlot( QWidget *parent = 0 );
 
     void                                setAudio( Audio *audio );
-    void                                loadStress( int window = 1024, int step = 4410 );
-    void                                loadOnset();
     void                                setPositionInSeconds( double seconds );
+    void                                setViewMode( VIEW_MODE viewMode );
     QString                             getFundamentalFrequency() const;
     QString                             getAverageVolume( double seconds ) ;
 
@@ -21,7 +26,8 @@ public:
 
 
 public slots:
-    void                                runningAverage( int window = 128 );
+    void                                loadAudioInfoFile( const QString &audioInfoFilePath );
+
     void                                resetRange();
     void                                resetRangeX( bool replot = true );
     void                                resetRangeY( bool replot = true );
@@ -29,18 +35,36 @@ public slots:
 
 private:
     Audio                               *audio;
-    QCPGraph                            *pcmGraph;
+    VIEW_MODE                           viewMode;
 
-    QVector<double>                     x;
-    QVector<double>                     y;
+    QCPGraph                            *onsetGraph;
+    QVector<double>                     xOnset;
+    QVector<double>                     yOnset;
+
+    QCPGraph                            *pcmGraph;
+    QVector<double>                     xPCM;
+    QVector<double>                     yPCM;
+
+    QCPGraph                            *pcmFormattedDangerGraph;
+    QVector<double>                     xFormattedDangerPCM;
+    QVector<double>                     yFormattedDangerPCM;
+
+    QCPGraph                            *pcmFormattedSafeGraph;
+    QVector<double>                     xFormattedSafePCM;
+    QVector<double>                     yFormattedSafePCM;
+
+    QCPGraph                            *pcmFormattedCautionGraph;
+    QVector<double>                     xFormattedCautionPCM;
+    QVector<double>                     yFormattedCautionPCM;
+
+    QCPGraph                            *meanGraph;
+
     QString                             cursorCoordinates;
-    QString                             plotInfo;
-    QString                             averageVolume;
+
     double                              seconds;
     bool                                showPosition;
-    bool                                showAverageVolume;
+    bool                                showMean;
     double                              meanAll;
-    int                                 tickTimer;
 
     void                                paintEvent( QPaintEvent *event );
 

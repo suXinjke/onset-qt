@@ -10,5 +10,6 @@
         <file>autozoomX.png</file>
         <file>autozoomY.png</file>
         <file>brick.png</file>
+        <file>page_white_go.png</file>
     </qresource>
 </RCC>

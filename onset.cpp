@@ -4,9 +4,6 @@
 Onset::Onset( QWidget *parent ) :
     QMainWindow( parent ),
     ui( new Ui::Onset ),
-    lastOnsetThresholdWindowSize( 20 ),
-    lastOnsetMultiplier( 1.5f ),
-    lastOnsetWindow( true ),
     audioDuration( 0.0 ) {
 
     ui->setupUi( this );
@@ -27,19 +24,20 @@ Onset::Onset( QWidget *parent ) :
     connect( ui->resetRangeAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRange() ) );
     connect( ui->resetRangeXAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRangeX() ) );
     connect( ui->resetRangeYAction, SIGNAL( triggered() ), ui->audioPlot, SLOT( resetRangeY() ) );
-    connect( ui->produceAudioInfoFileAction, SIGNAL( triggered() ), this, SLOT( produceAudioInfoFile() ) );
+    connect( ui->produceAudioInfoFileAction, SIGNAL( triggered() ), this, SLOT( updateAudioInfo() ) );
 
     connect( ui->audioPlot, SIGNAL( positionChanged( double ) ), this, SLOT( seek( double ) ) );
 
     connect( ui->onsetViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showOnset() ) );
     connect( ui->stressViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showStress() ) );
+    connect( ui->stressFormattedViewModeRadioButton, SIGNAL( toggled( bool ) ), this, SLOT( showStressFormatted() ) );
 
-    connect( ui->onsetThresholdWindowSizeSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
-    connect( ui->onsetMultiplierSpinBox, SIGNAL( valueChanged( double ) ), this, SLOT( showByRadioButton() ) );
-    connect( ui->onsetWindowCheckbox, SIGNAL( toggled( bool ) ), this, SLOT( showByRadioButton() ) );
+    connect( ui->onsetThresholdWindowSizeSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateAudioInfo() ) );
+    connect( ui->onsetMultiplierSpinBox, SIGNAL( valueChanged( double ) ), this, SLOT( updateAudioInfo() ) );
+    connect( ui->onsetWindowCheckbox, SIGNAL( toggled( bool ) ), this, SLOT( updateAudioInfo() ) );
 
-    connect( ui->waveformStepSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
-    connect( ui->stressWindowSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( showByRadioButton() ) );
+    connect( ui->waveformStepSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateAudioInfo() ) );
+    connect( ui->stressWindowSpinBox, SIGNAL( valueChanged( int ) ), this, SLOT( updateAudioInfo() ) );
 }
 
 Onset::~Onset() {
@@ -69,13 +67,7 @@ void Onset::loadAudioFile( const QString &audioFilePath ) {
     ui->audioSeekSlider->setMaximum( audioDuration );
     this->updateSeekInfo();
 
-    ui->onsetThresholdWindowSizeSpinBox->setValue( 20 );
-    ui->onsetMultiplierSpinBox->setValue( 1.5 );
-    ui->onsetWindowCheckbox->setChecked( true );
-    audio->setOnsetOptions( 20, 1.5, true );
-    audio->setOnsetFilter( 0, 0 );
-
-    this->showByRadioButton();
+    this->showAudioInfo();
     this->play();
 }
 
@@ -117,45 +109,44 @@ void Onset::updateSeekInfo() {
     ui->audioPlot->setPositionInSeconds( audioPosition );
 }
 
-void Onset::showByRadioButton() {
-    if ( ui->onsetViewModeRadioButton->isChecked() ) {
-        this->showOnset();
-    } else if ( ui->stressViewModeRadioButton->isChecked() ) {
-        this->showStress();
+void Onset::showAudioInfo() {
+    QFile file( audioFilePath );
+    file.open( QIODevice::ReadOnly );
+    QString sha1 = QCryptographicHash::hash( file.readAll(), QCryptographicHash::Sha1 ).toHex();
+    file.close();
+
+    QString audioInfoFilePath = QString( "D:\\audios\\%1.txt" ).arg( sha1 );
+    if ( !QFile::exists( audioInfoFilePath ) ) {
+        int pcmStep = ui->waveformStepSpinBox->value();
+        int window = ui->stressWindowSpinBox->value();
+        audio->produceAudioInfoFile( pcmStep, window );
     }
+
+    ui->audioPlot->loadAudioInfoFile( audioInfoFilePath );
 }
 
 void Onset::showOnset() {
-    if ( !ui->onsetViewModeRadioButton->isChecked() ) {
-        return;
-    }
-
-    int thresholdWindowSize = ui->onsetThresholdWindowSizeSpinBox->value();
-    float onsetMultiplier = ui->onsetMultiplierSpinBox->value();
-
-    bool onsetWindow = ui->onsetWindowCheckbox->isChecked();
-    if ( thresholdWindowSize != lastOnsetThresholdWindowSize || lastOnsetMultiplier != onsetMultiplier
-            || onsetWindow != lastOnsetWindow ) {
-        lastOnsetThresholdWindowSize = thresholdWindowSize;
-        lastOnsetMultiplier = onsetMultiplier;
-        lastOnsetWindow = onsetWindow;
-
-        audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, onsetWindow );
-    }
-
-    audio->fillPCM( ui->waveformStepSpinBox->value() );
-
-    ui->audioPlot->loadOnset();
+    ui->audioPlot->setViewMode( AudioPlot::VIEW_MODE_ONSET );
 }
 
 void Onset::showStress() {
-    if ( !ui->stressViewModeRadioButton->isChecked() ) {
-        return;
-    }
+    ui->audioPlot->setViewMode( AudioPlot::VIEW_MODE_STRESS );
+}
 
-    int step = ui->waveformStepSpinBox->value();
-    int stressWindow = ui->stressWindowSpinBox->value();
-    ui->audioPlot->loadStress( stressWindow, step );
+void Onset::showStressFormatted() {
+    ui->audioPlot->setViewMode( AudioPlot::VIEW_MODE_STRESS_FORMATTED );
+}
+
+void Onset::updateAudioInfo() {
+    int thresholdWindowSize = ui->onsetThresholdWindowSizeSpinBox->value();
+    double onsetMultiplier = ui->onsetMultiplierSpinBox->value();
+    bool onsetWindow = ui->onsetWindowCheckbox->isChecked();
+    audio->setOnsetOptions( thresholdWindowSize, onsetMultiplier, onsetWindow );
+
+    int pcmStep = ui->waveformStepSpinBox->value();
+    int window = ui->stressWindowSpinBox->value();
+    audio->produceAudioInfoFile( pcmStep, window );
+    this->showAudioInfo();
 }
 
 void Onset::updateSeekSlider( double audioPosition ) {
@@ -173,34 +164,4 @@ void Onset::updateSeekLabel( double audioPosition ) {
                             .arg( durationTime.toString( "mm:ss" ) );
 
     ui->audioSeekLabel->setText( seekLabelText );
-}
-
-void Onset::produceAudioInfoFile() {
-    QFile file( audioFilePath );
-    file.open( QIODevice::ReadOnly );
-    QString sha1 = QCryptographicHash::hash( file.readAll(), QCryptographicHash::Sha1 ).toHex();
-    file.close();
-
-    QFile outFile( QString( "D:\\%1" ).arg( sha1 ) );
-    if ( outFile.open( QIODevice::WriteOnly ) ) {
-        QVector<float> peaks = audio->getPeaks();
-        int N = peaks.length();
-        if ( N <= 0 ) {
-            return;
-        }
-        int frequency = audio->getAudioFrequency();
-        QTextStream out( &outFile );
-
-        for ( int i = 0 ; i < N ; i ++ ) {
-            if ( peaks.at( i ) > 0.0 ) {
-                double positionSeconds = i * ( 2048.0 / frequency );
-                out << positionSeconds << ", " << audio->getLevelAtPosition( positionSeconds ) << endl;
-            }
-        }
-
-        outFile.close();
-    }
-
-
-
 }

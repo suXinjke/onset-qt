@@ -119,6 +119,13 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QRadioButton" name="stressFormattedViewModeRadioButton">
+           <property name="text">
+            <string>Stress formatted</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -322,33 +329,6 @@
     <string>Load Audio</string>
    </property>
   </action>
-  <action name="resetRangeAction">
-   <property name="icon">
-    <iconset resource="res/resources.qrc">
-     <normaloff>:/autozoom.png</normaloff>:/autozoom.png</iconset>
-   </property>
-   <property name="text">
-    <string>Reset Range</string>
-   </property>
-  </action>
-  <action name="resetRangeXAction">
-   <property name="icon">
-    <iconset resource="res/resources.qrc">
-     <normaloff>:/autozoomX.png</normaloff>:/autozoomX.png</iconset>
-   </property>
-   <property name="text">
-    <string>Reset Range X</string>
-   </property>
-  </action>
-  <action name="resetRangeYAction">
-   <property name="icon">
-    <iconset resource="res/resources.qrc">
-     <normaloff>:/autozoomY.png</normaloff>:/autozoomY.png</iconset>
-   </property>
-   <property name="text">
-    <string>Reset Range Y</string>
-   </property>
-  </action>
   <action name="produceAudioInfoFileAction">
    <property name="icon">
     <iconset resource="res/resources.qrc">
@@ -359,6 +339,39 @@
    </property>
    <property name="toolTip">
     <string>Make Audio info file</string>
+   </property>
+  </action>
+  <action name="resetRangeXAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoomX.png</normaloff>:/autozoomX.png</iconset>
+   </property>
+   <property name="text">
+    <string>resetRangeX</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset Range X</string>
+   </property>
+  </action>
+  <action name="resetRangeYAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoomY.png</normaloff>:/autozoomY.png</iconset>
+   </property>
+   <property name="text">
+    <string>resetRangeY</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset Range Y</string>
+   </property>
+  </action>
+  <action name="resetRangeAction">
+   <property name="icon">
+    <iconset resource="res/resources.qrc">
+     <normaloff>:/autozoom.png</normaloff>:/autozoom.png</iconset>
+   </property>
+   <property name="text">
+    <string>ResetRange</string>
    </property>
   </action>
  </widget>
